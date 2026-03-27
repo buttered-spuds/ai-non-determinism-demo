@@ -39,9 +39,6 @@
     .automate-tab.active  { background: #4f46e5; color: #fff; }
     .automate-tab:not(.active) { background: transparent; color: #6b7280; }
     .automate-tab:not(.active):hover { color: #111827; }
-
-    .automate-panel { display: none; }
-    .automate-panel.active-panel { display: block; }
   </style>
 </head>
 
@@ -124,13 +121,13 @@
         <!-- Tab bar -->
         <div class="px-6 pt-5 pb-3 border-b border-gray-100">
           <div class="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-1" role="tablist" aria-label="Language examples">
-            <button class="automate-tab active"
+            <button class="automate-tab active" type="button" tabindex="0"
               id="automate-tab-ts" data-automate-target="automate-ts" role="tab" aria-selected="true" aria-controls="automate-ts">TypeScript</button>
-            <button class="automate-tab"
+            <button class="automate-tab" type="button" tabindex="-1"
               id="automate-tab-dotnet" data-automate-target="automate-dotnet" role="tab" aria-selected="false" aria-controls="automate-dotnet">.NET (C#)</button>
-            <button class="automate-tab"
+            <button class="automate-tab" type="button" tabindex="-1"
               id="automate-tab-py" data-automate-target="automate-py" role="tab" aria-selected="false" aria-controls="automate-py">Python</button>
-            <button class="automate-tab"
+            <button class="automate-tab" type="button" tabindex="-1"
               id="automate-tab-js" data-automate-target="automate-js" role="tab" aria-selected="false" aria-controls="automate-js">JavaScript</button>
           </div>
         </div>
@@ -138,7 +135,7 @@
         <div class="px-6 pb-6 pt-4 space-y-4 text-sm text-gray-600">
 
           <!-- TypeScript panel -->
-          <div id="automate-ts" class="automate-panel active-panel" role="tabpanel" aria-labelledby="automate-tab-ts" tabindex="0">
+          <div id="automate-ts" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-ts" tabindex="0">
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity @types/string-similarity</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.ts</span>
 import { test, expect } from '@playwright/test';
@@ -166,7 +163,7 @@ test('AI response is semantically similar to expected output', async ({ page }) 
           </div>
 
           <!-- .NET panel -->
-          <div id="automate-dotnet" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-dotnet" tabindex="0">
+          <div id="automate-dotnet" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-dotnet" tabindex="0" hidden>
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">dotnet add package Microsoft.Playwright.NUnit</code> then <code class="bg-gray-100 px-1 rounded">dotnet add package FuzzySharp</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// AutomateAiDemoTests.cs</span>
 using FuzzySharp;
@@ -203,7 +200,7 @@ public class AutomateAiDemoTests : PageTest
           </div>
 
           <!-- Python panel -->
-          <div id="automate-py" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-py" tabindex="0">
+          <div id="automate-py" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-py" tabindex="0" hidden>
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">pip install playwright rapidfuzz</code> then <code class="bg-gray-100 px-1 rounded">playwright install</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># test_automate_ai_demo.py</span>
 import re
@@ -231,7 +228,7 @@ def test_ai_response_is_semantically_close(page: Page):
           </div>
 
           <!-- JavaScript panel -->
-          <div id="automate-js" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-js" tabindex="0">
+          <div id="automate-js" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-js" tabindex="0" hidden>
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.js</span>
 const { test, expect } = require('@playwright/test');
@@ -311,26 +308,66 @@ test('AI response is semantically similar to expected output', async ({ page }) 
   </footer>
 
   <script>
-    // Language tab switching for the automation code examples
-    document.querySelectorAll('.automate-tab').forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        // Deactivate all tabs
-        document.querySelectorAll('.automate-tab').forEach(function(t) {
+    (function () {
+      var tabs   = Array.prototype.slice.call(document.querySelectorAll('.automate-tab'));
+      var panels = Array.prototype.slice.call(document.querySelectorAll('.automate-panel'));
+
+      /**
+       * Activates the given tab: marks it selected, gives it tabindex 0,
+       * sets all other tabs to tabindex -1, and reveals its associated panel.
+       * @param {HTMLElement} tab - The tab button element to activate.
+       */
+      function activateTab(tab) {
+        // Deactivate all tabs and hide all panels
+        tabs.forEach(function (t) {
           t.classList.remove('active');
           t.setAttribute('aria-selected', 'false');
+          t.tabIndex = -1;
         });
-        // Hide all panels
-        document.querySelectorAll('.automate-panel').forEach(function(p) {
-          p.classList.remove('active-panel');
+        panels.forEach(function (p) {
+          p.hidden = true;
         });
-        // Activate clicked tab and show its panel
+
+        // Activate the chosen tab
         tab.classList.add('active');
         tab.setAttribute('aria-selected', 'true');
-        var target = tab.dataset.automateTarget;
-        var panel = document.getElementById(target);
-        if (panel) panel.classList.add('active-panel');
+        tab.tabIndex = 0;
+
+        // Show the associated panel; focus stays on the activated tab
+        var panel = document.getElementById(tab.dataset.automateTarget);
+        if (panel) {
+          panel.hidden = false;
+        }
+      }
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          activateTab(tab);
+        });
+
+        tab.addEventListener('keydown', function (event) {
+          var key = event.key;
+          var currentIndex = tabs.indexOf(tab);
+          var nextIndex = currentIndex;
+
+          if (key === 'ArrowRight') {
+            nextIndex = (currentIndex + 1) % tabs.length;
+          } else if (key === 'ArrowLeft') {
+            nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+          } else if (key === 'Home') {
+            nextIndex = 0;
+          } else if (key === 'End') {
+            nextIndex = tabs.length - 1;
+          } else {
+            return; // let other keys fall through
+          }
+
+          event.preventDefault();
+          tabs[nextIndex].focus();
+          activateTab(tabs[nextIndex]);
+        });
       });
-    });
+    })();
   </script>
 </body>
 </html>
