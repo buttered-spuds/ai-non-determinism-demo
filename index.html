@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Why Can't You Just Assert It? — AI Output Simulator</title>
+
+  <!-- Tailwind CSS (pinned browser build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.0.0"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-family-sans: "Inter", ui-sans-serif, system-ui;
+      --font-family-mono: "Fira Code", ui-monospace, monospace;
+    }
+  </style>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ── Custom styles that complement Tailwind ─────────────────────────── */
+
+    /* Output / hallucination cards animate in */
+    .output-card, .h-card {
+      animation: fadeUp 0.35s ease both;
+    }
+
+    /* Similarity badges */
+    .badge          { display: inline-flex; align-items: center; gap: 4px; border-radius: 9999px; padding: 2px 10px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    .badge-green    { background: #d1fae5; color: #065f46; }
+    .badge-yellow   { background: #fef9c3; color: #854d0e; }
+    .badge-red      { background: #fee2e2; color: #991b1b; }
+
+    /* Hallucination card accent colours */
+    .h-correct    { border-left: 4px solid #22c55e; }
+    .h-wrong      { border-left: 4px solid #ef4444; }
+    .h-misleading { border-left: 4px solid #f97316; }
+
+    .h-correct-badge    { background: #d1fae5; color: #065f46; }
+    .h-wrong-badge      { background: #fee2e2; color: #991b1b; }
+    .h-misleading-badge { background: #ffedd5; color: #9a3412; }
+
+    /* Code blocks inside the Traditional vs AI panel */
+    code { font-family: "Fira Code", monospace; }
+
+    /* Temperature track colour via accent */
+    input[type=range] { accent-color: #6366f1; }
+
+    /* Cheat-sheet chevron */
+    .chevron { display: inline-block; transition: transform 0.2s; }
+
+    /* Card text */
+    .card-text { margin: 0; font-style: italic; color: #374151; line-height: 1.6; }
+
+    /* Placeholder */
+    .placeholder-text { color: #9ca3af; font-style: italic; text-align: center; padding: 2rem 0; }
+
+    /* Scrollable grid */
+    #output-grid, #hallucination-grid {
+      max-height: 540px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+    }
+
+    /* Sticky section headings inside long grids */
+    .card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .card-label  { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
+
+    /* Hallucination note */
+    .h-note { margin-top: 8px; font-size: 0.78rem; color: #6b7280; background: #f9fafb; border-radius: 6px; padding: 6px 10px; }
+  </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900 antialiased">
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════════════════════════════════ -->
+  <header class="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white">
+    <div class="max-w-5xl mx-auto px-6 py-20 text-center">
+      <p class="text-sm font-semibold uppercase tracking-widest text-indigo-200 mb-4">
+        Interactive Demo &nbsp;·&nbsp; AI Testing
+      </p>
+      <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight mb-5">
+        Same prompt.<br />Different answers.<br />Every time.
+      </h1>
+      <p class="text-lg sm:text-xl text-indigo-100 max-w-2xl mx-auto">
+        This is why testing AI systems requires a completely different approach.
+      </p>
+      <p class="mt-3 text-sm text-indigo-300 italic">
+        "Why Can't You Just Assert It?" — The AI Output Simulator
+      </p>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-14 space-y-16">
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION 1 — CORE DEMO
+    ══════════════════════════════════════════════════════════════════ -->
+    <section aria-labelledby="demo-heading">
+      <h2 id="demo-heading" class="text-2xl font-bold mb-1">🔁 The Nondeterminism Simulator</h2>
+      <p class="text-gray-500 mb-6 text-sm">
+        Click <strong>Run Prompt</strong> repeatedly and watch the outputs change — even though the prompt never does.
+      </p>
+
+      <!-- Prompt input (read-only for the demo, shows intent) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <label for="prompt-input" class="block text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">
+          Your Prompt
+        </label>
+        <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+          <span class="text-indigo-400 text-xl select-none">💬</span>
+          <input
+            id="prompt-input"
+            type="text"
+            class="flex-1 bg-transparent text-gray-700 font-medium focus:outline-none"
+            value="Summarise the benefits of automated testing in one sentence."
+            readonly
+          />
+        </div>
+
+        <!-- Temperature slider -->
+        <div class="mt-5">
+          <div class="flex items-center justify-between mb-1">
+            <label for="temperature-slider" class="text-xs font-semibold uppercase tracking-widest text-gray-400">
+              Temperature
+            </label>
+            <span class="text-xs font-mono text-indigo-500" id="temp-value">0.20</span>
+          </div>
+          <input
+            id="temperature-slider"
+            type="range"
+            min="0"
+            max="100"
+            value="20"
+            class="w-full h-2 rounded-lg appearance-none cursor-pointer"
+          />
+          <div class="flex justify-between text-xs text-gray-400 mt-1">
+            <span>0 — Deterministic</span>
+            <span id="temp-label" class="font-semibold text-indigo-500">🥶 Deterministic</span>
+            <span>1 — Creative</span>
+          </div>
+          <p class="text-xs text-gray-400 mt-2 italic">
+            Lower temperature → more similar outputs. Higher temperature → more varied, sometimes surprising responses.
+          </p>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex flex-wrap gap-3 mt-6">
+          <button
+            id="btn-run-once"
+            class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            ▶ Run Prompt
+          </button>
+          <button
+            id="btn-run-ten"
+            class="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold text-sm shadow transition-colors focus:outline-none focus:ring-2 focus:ring-violet-400"
+          >
+            ⚡ Run 10 Times
+          </button>
+          <button
+            id="btn-clear-main"
+            class="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-600 font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            ✕ Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Output grid -->
+      <div
+        id="output-grid"
+        class="grid gap-4"
+        style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"
+      >
+        <p class="placeholder-text col-span-full">Hit <strong>Run Prompt</strong> to see the AI respond…</p>
+      </div>
+
+      <!-- Similarity legend -->
+      <div class="mt-6 flex flex-wrap gap-4 text-xs text-gray-500">
+        <span class="badge badge-green">🟢 Semantically equivalent</span>
+        <span class="badge badge-yellow">🟡 Similar but different phrasing</span>
+        <span class="badge badge-red">🔴 Significantly different</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION 2 — TRADITIONAL vs AI TESTING
+    ══════════════════════════════════════════════════════════════════ -->
+    <section aria-labelledby="compare-heading">
+      <h2 id="compare-heading" class="text-2xl font-bold mb-1">⚖️ Traditional vs AI Testing</h2>
+      <p class="text-gray-500 mb-6 text-sm">
+        See why a hard assertion that works perfectly in traditional software simply can't work for AI.
+      </p>
+
+      <!-- Toggle -->
+      <div class="inline-flex rounded-xl border border-gray-200 bg-white shadow-sm p-1 mb-6" role="tablist" aria-label="Traditional versus AI testing">
+        <button
+          class="toggle-btn active px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white"
+          data-target="panel-traditional"
+          id="tab-traditional"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panel-traditional"
+        >
+          Traditional Test
+        </button>
+        <button
+          class="toggle-btn px-5 py-2 rounded-lg text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800"
+          data-target="panel-ai"
+          id="tab-ai"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panel-ai"
+        >
+          AI Test
+        </button>
+      </div>
+
+      <!-- Traditional panel -->
+      <div id="panel-traditional" class="test-panel bg-white rounded-2xl shadow-sm border border-gray-100 p-6" role="tabpanel" aria-labelledby="tab-traditional" tabindex="0">
+        <h3 class="font-bold text-gray-800 mb-3">📋 Traditional Assertion</h3>
+        <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-sm font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># Works perfectly for deterministic software</span>
+def test_summarise():
+    output = summarise_benefits()
+    <span class="text-red-400">assert output == "Automated testing saves time by catching bugs early and reducing manual effort."</span>
+
+<span class="text-gray-400"># Result when run against an AI model:</span>
+<span class="text-red-300">FAILED — AssertionError</span>
+<span class="text-gray-400"># Even though the model gave a perfectly valid answer!</span></code></pre>
+        <p class="mt-4 text-sm text-gray-500">
+          The model returned a correct, high-quality answer — but it used different words.
+          A hard <code class="bg-gray-100 px-1 rounded text-xs">assert ==</code> fails every time.
+        </p>
+        <div class="mt-4 flex items-center gap-2 text-sm font-semibold text-red-600 bg-red-50 rounded-xl px-4 py-3">
+          ❌ This approach breaks on every valid AI response that differs by a single word.
+        </div>
+      </div>
+
+      <!-- AI panel (hidden by default) -->
+      <div id="panel-ai" class="test-panel hidden bg-white rounded-2xl shadow-sm border border-gray-100 p-6" role="tabpanel" aria-labelledby="tab-ai" tabindex="0">
+        <h3 class="font-bold text-gray-800 mb-3">🤖 AI-Aware Assertion</h3>
+        <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-sm font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># AI outputs need semantic, not lexical, comparison</span>
+def test_summarise_ai():
+    output = ask_model("Summarise the benefits of automated testing in one sentence.")
+
+    <span class="text-yellow-300">assert semantic_similarity(output, REFERENCE) > 0.85</span>
+    <span class="text-yellow-300">assert mentions_any(output, ["testing", "bugs", "quality", "automation"])</span>
+    <span class="text-yellow-300">assert word_count(output) &lt; 50</span>
+    <span class="text-yellow-300">assert not contains_hallucination(output)</span>
+
+<span class="text-gray-400"># Result:</span>
+<span class="text-green-300">PASSED ✅ — all four semantically valid outputs pass</span></code></pre>
+        <p class="mt-4 text-sm text-gray-500">
+          Instead of exact matching, AI tests assert on <strong>semantic similarity</strong>,
+          <strong>keyword presence</strong>, <strong>format constraints</strong>, and
+          <strong>factual validation</strong>.
+        </p>
+        <div class="mt-4 flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-50 rounded-xl px-4 py-3">
+          ✅ This approach passes for any valid response — and catches genuinely bad ones.
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION 3 — HALLUCINATION DEMO
+    ══════════════════════════════════════════════════════════════════ -->
+    <section aria-labelledby="hallucination-heading">
+      <h2 id="hallucination-heading" class="text-2xl font-bold mb-1">🧠 Hallucination Demo</h2>
+      <p class="text-gray-500 mb-6 text-sm">
+        A question with a definite correct answer — but the AI sometimes gets the details subtly wrong.
+        This is why AI outputs need <em>validation</em>, not just format checks.
+      </p>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+        <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-5">
+          <span class="text-indigo-400 text-xl select-none">💬</span>
+          <span class="text-gray-700 font-medium">Who invented the World Wide Web, and in what year?</span>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button
+            id="btn-hallucination"
+            class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            ▶ Ask the AI
+          </button>
+          <button
+            id="btn-clear-hallucination"
+            class="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-600 font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+            ✕ Clear
+          </button>
+        </div>
+      </div>
+
+      <div id="hallucination-grid" class="space-y-3">
+        <p class="placeholder-text">Hit <strong>Ask the AI</strong> to see responses…</p>
+      </div>
+
+      <!-- Legend -->
+      <div class="mt-5 flex flex-wrap gap-4 text-xs text-gray-500">
+        <span class="badge h-correct-badge">✅ Correct</span>
+        <span class="badge h-misleading-badge">🟠 Misleading</span>
+        <span class="badge h-wrong-badge">⚠️ Subtly wrong / ❌ Wrong concept</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION 4 — TEST STRATEGY CHEAT SHEET
+    ══════════════════════════════════════════════════════════════════ -->
+    <section aria-labelledby="cheatsheet-heading">
+      <h2 id="cheatsheet-heading" class="text-2xl font-bold mb-1">📋 Test Strategy Cheat Sheet</h2>
+      <p class="text-gray-500 mb-6 text-sm">
+        A quick-reference summary of the strategies that make AI testing tractable.
+        Click any row to expand it.
+      </p>
+
+      <div class="space-y-3">
+
+        <!-- 1 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            class="cheat-toggle w-full text-left px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            aria-expanded="false"
+            aria-controls="cheat-panel-1"
+          >
+            <span class="font-semibold text-gray-800">1 · Semantic Similarity Scoring</span>
+            <span class="chevron text-gray-400 text-lg">▸</span>
+          </button>
+          <div id="cheat-panel-1" class="hidden px-6 pb-5 text-sm text-gray-600 space-y-2 border-t border-gray-100 pt-4">
+            <p>Use embedding models (e.g. Sentence-BERT, OpenAI <code class="bg-gray-100 px-1 rounded">text-embedding-3-small</code> or <code class="bg-gray-100 px-1 rounded">text-embedding-3-large</code>) or cosine similarity to compare the <em>meaning</em> of outputs rather than their exact text.</p>
+            <p><strong>Threshold example:</strong> <code class="bg-gray-100 px-1 rounded">semantic_similarity(output, reference) &gt; 0.85</code></p>
+            <p class="text-gray-400 italic">Best for: open-ended generation, summarisation, Q&amp;A.</p>
+          </div>
+        </div>
+
+        <!-- 2 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            class="cheat-toggle w-full text-left px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            aria-expanded="false"
+            aria-controls="cheat-panel-2"
+          >
+            <span class="font-semibold text-gray-800">2 · LLM-as-a-Judge</span>
+            <span class="chevron text-gray-400 text-lg">▸</span>
+          </button>
+          <div id="cheat-panel-2" class="hidden px-6 pb-5 text-sm text-gray-600 space-y-2 border-t border-gray-100 pt-4"> Ask questions like: <em>"Is this answer factually correct? Is it relevant? Is it harmful?"</em></p>
+            <p><strong>Tools:</strong> GPT-4 as judge, Claude Constitutional AI, custom scoring prompts.</p>
+            <p class="text-gray-400 italic">Best for: complex outputs where rule-based scoring is insufficient.</p>
+          </div>
+        </div>
+
+        <!-- 3 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            class="cheat-toggle w-full text-left px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            aria-expanded="false"
+            aria-controls="cheat-panel-3"
+          >
+            <span class="font-semibold text-gray-800">3 · Constraint-Based Assertions</span>
+            <span class="chevron text-gray-400 text-lg">▸</span>
+          </button>
+          <div id="cheat-panel-3" class="hidden px-6 pb-5 text-sm text-gray-600 space-y-2 border-t border-gray-100 pt-4"> rather than exact content: word count, JSON schema validity, required keyword presence, absence of banned phrases, sentiment bounds.</p>
+            <p><strong>Example:</strong> <code class="bg-gray-100 px-1 rounded">assert len(output.split()) &lt; 50 and "testing" in output.lower()</code></p>
+            <p class="text-gray-400 italic">Best for: format compliance, safety guardrails, structured output.</p>
+          </div>
+        </div>
+
+        <!-- 4 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            class="cheat-toggle w-full text-left px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            aria-expanded="false"
+            aria-controls="cheat-panel-4"
+          >
+            <span class="font-semibold text-gray-800">4 · Hallucination Detection</span>
+            <span class="chevron text-gray-400 text-lg">▸</span>
+          </button>
+          <div id="cheat-panel-4" class="hidden px-6 pb-5 text-sm text-gray-600 space-y-2 border-t border-gray-100 pt-4"> against a trusted knowledge base or retrieval system. Flag responses that include unverifiable or contradicted claims.</p>
+            <p><strong>Approaches:</strong> RAG grounding checks, named entity verification, fact-checking APIs.</p>
+            <p class="text-gray-400 italic">Best for: factual Q&amp;A, customer-facing chatbots, medical/legal domains.</p>
+          </div>
+        </div>
+
+        <!-- 5 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            class="cheat-toggle w-full text-left px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            aria-expanded="false"
+            aria-controls="cheat-panel-5"
+          >
+            <span class="font-semibold text-gray-800">5 · Statistical / Regression Testing</span>
+            <span class="chevron text-gray-400 text-lg">▸</span>
+          </button>
+          <div id="cheat-panel-5" class="hidden px-6 pb-5 text-sm text-gray-600 space-y-2 border-t border-gray-100 pt-4"> and assert on <em>distributions</em> rather than single outputs. Track pass-rate trends across model versions to catch regressions.</p>
+            <p><strong>Example:</strong> <code class="bg-gray-100 px-1 rounded">assert pass_rate(prompt, n=100) &gt;= 0.95</code></p>
+            <p class="text-gray-400 italic">Best for: model evaluation, A/B testing, production monitoring.</p>
+          </div>
+        </div>
+
+        <!-- 6 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            class="cheat-toggle w-full text-left px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            aria-expanded="false"
+            aria-controls="cheat-panel-6"
+          >
+            <span class="font-semibold text-gray-800">6 · Red-Teaming &amp; Adversarial Prompts</span>
+            <span class="chevron text-gray-400 text-lg">▸</span>
+          </button>
+          <div id="cheat-panel-6" class="hidden px-6 pb-5 text-sm text-gray-600 space-y-2 border-t border-gray-100 pt-4"> designed to elicit harmful, biased, or incorrect outputs. Use prompt injection attacks, jailbreaks, and edge-case inputs to stress-test guardrails.</p>
+            <p><strong>Tools:</strong> PyRIT, Garak, manual red-team sprints.</p>
+            <p class="text-gray-400 italic">Best for: safety evaluation, compliance, high-stakes deployments.</p>
+          </div>
+        </div>
+
+      </div><!-- /space-y-3 -->
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════════════════════════════ -->
+  <footer class="border-t border-gray-100 bg-white mt-16">
+    <div class="max-w-5xl mx-auto px-6 py-8 text-center text-sm text-gray-400">
+      <p>
+        All responses are pre-written simulations — no API calls, no backend, no secrets.
+        Hosted on
+        <a
+          href="https://pages.github.com"
+          class="underline hover:text-indigo-500 transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub Pages</a
+        >.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="responses.js"></script>
+  <script src="simulator.js"></script>
+</body>
+</html>
