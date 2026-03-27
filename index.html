@@ -58,6 +58,11 @@
       outline: none;
       cursor: pointer;
     }
+    input[type=range]:focus-visible {
+      outline: 2px solid #4f46e5;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
+    }
     input[type=range]::-webkit-slider-runnable-track {
       height: 6px;
       border-radius: 9999px;
@@ -529,7 +534,7 @@ def test_summarise_ai():
           </div>
 
           <!-- TypeScript panel -->
-          <div id="automate-ts" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-ts">
+          <div id="automate-ts" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-ts" tabindex="0">
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity @types/string-similarity</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.ts</span>
 import { test, expect } from '@playwright/test';
@@ -557,7 +562,7 @@ test('AI response is semantically similar to expected output', async ({ page }) 
           </div>
 
           <!-- .NET panel -->
-          <div id="automate-dotnet" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-dotnet">
+          <div id="automate-dotnet" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-dotnet" tabindex="0">
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">dotnet add package Microsoft.Playwright.NUnit &amp;&amp; dotnet add package FuzzySharp</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// AutomateAiDemoTests.cs</span>
 using FuzzySharp;
@@ -594,7 +599,7 @@ public class AutomateAiDemoTests : PageTest
           </div>
 
           <!-- Python panel -->
-          <div id="automate-py" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-py">
+          <div id="automate-py" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-py" tabindex="0">
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">pip install playwright rapidfuzz &amp;&amp; playwright install</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># test_automate_ai_demo.py</span>
 import re
@@ -622,7 +627,7 @@ def test_ai_response_is_semantically_close(page: Page):
           </div>
 
           <!-- JavaScript panel -->
-          <div id="automate-js" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-js">
+          <div id="automate-js" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-js" tabindex="0">
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.js</span>
 const { test, expect } = require('@playwright/test');
