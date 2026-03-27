@@ -47,8 +47,66 @@
     /* Code blocks inside the Traditional vs AI panel */
     code { font-family: "Fira Code", monospace; }
 
-    /* Temperature track colour via accent */
-    input[type=range] { accent-color: #6366f1; }
+    /* Temperature slider — cross-browser styled track and thumb */
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #6366f1, #f97316);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]:focus-visible {
+      outline: 2px solid #4f46e5;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #6366f1, #f97316);
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #6366f1;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      margin-top: -7px;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    input[type=range]::-moz-range-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #6366f1, #f97316);
+    }
+    input[type=range]::-moz-range-progress {
+      height: 6px;
+      border-radius: 9999px;
+      background: #6366f1;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #6366f1;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb:hover {
+      border-color: #f97316;
+    }
 
     /* Cheat-sheet chevron */
     .chevron { display: inline-block; transition: transform 0.2s; }
@@ -190,8 +248,8 @@
         <p class="placeholder-text col-span-full">Hit <strong>Run Prompt</strong> to see the AI respond…</p>
       </div>
 
-      <!-- Similarity legend -->
-      <div class="mt-6 flex flex-wrap gap-4 text-xs text-gray-500">
+      <!-- Similarity legend (hidden until a prompt is run) -->
+      <div id="similarity-legend" class="mt-6 flex flex-wrap gap-4 text-xs text-gray-500" style="display: none;">
         <span class="badge badge-green">🟢 Semantically equivalent</span>
         <span class="badge badge-yellow">🟡 Similar but different phrasing</span>
         <span class="badge badge-red">🔴 Significantly different</span>
@@ -311,8 +369,8 @@ def test_summarise_ai():
         <p class="placeholder-text">Hit <strong>Ask the AI</strong> to see responses…</p>
       </div>
 
-      <!-- Legend -->
-      <div class="mt-5 flex flex-wrap gap-4 text-xs text-gray-500">
+      <!-- Legend (hidden until Ask the AI is clicked) -->
+      <div id="hallucination-legend" class="mt-5 flex flex-wrap gap-4 text-xs text-gray-500" style="display: none;">
         <span class="badge h-correct-badge">✅ Correct</span>
         <span class="badge h-misleading-badge">🟠 Misleading</span>
         <span class="badge h-wrong-badge">⚠️ Subtly wrong / ❌ Wrong concept</span>
@@ -431,6 +489,183 @@ def test_summarise_ai():
       </div><!-- /space-y-3 -->
     </section>
 
+    <!-- ══════════════════════════════════════════════════════════════════
+         SECTION 5 — HOW TO AUTOMATE THIS?
+    ══════════════════════════════════════════════════════════════════ -->
+    <section aria-labelledby="automate-heading">
+      <h2 id="automate-heading" class="sr-only">How to automate this?</h2>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <button
+          id="automate-toggle"
+          class="w-full text-left px-6 py-5 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          aria-expanded="false"
+          aria-controls="automate-panel"
+        >
+          <div>
+            <span class="text-xl font-bold text-gray-800">How to automate this?</span>
+            <p class="text-sm text-gray-500 mt-0.5">Playwright examples for testing non-deterministic AI UIs</p>
+          </div>
+          <span class="automate-chevron chevron text-gray-400 text-xl ml-4 flex-shrink-0">▸</span>
+        </button>
+
+        <div id="automate-panel" class="hidden border-t border-gray-100 px-6 pb-6 pt-5 text-sm text-gray-600 space-y-5">
+
+          <p>
+            Start by navigating to the deployed URL as the first step in your test — for example, using a
+            <code class="bg-gray-100 px-1 rounded">goto</code> (or <code class="bg-gray-100 px-1 rounded">GotoAsync</code>) step in Playwright.
+          </p>
+
+          <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-indigo-800">
+            <strong>The core challenge:</strong> AI responses are non-deterministic — the same prompt will produce
+            different (but often equally valid) answers on every run. Exact string matching will cause your tests
+            to fail even when the AI is working correctly. Instead, use a
+            <strong>semantic or fuzzy comparison</strong> library to assert that the response is
+            <em>close enough</em> to an expected value.
+          </div>
+
+          <p>
+            The examples below show how to navigate to this demo, click the button to get a response, and
+            assert that the output is meaningfully similar to a reference answer — rather than requiring an
+            exact match.
+          </p>
+
+          <!-- Tab bar -->
+          <div class="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-1" role="tablist" aria-label="Language examples">
+            <button class="automate-tab active px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors bg-indigo-600 text-white"
+              id="automate-tab-ts" data-automate-target="automate-ts" role="tab" aria-selected="true" aria-controls="automate-ts">TypeScript</button>
+            <button class="automate-tab px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800"
+              id="automate-tab-dotnet" data-automate-target="automate-dotnet" role="tab" aria-selected="false" aria-controls="automate-dotnet">.NET (C#)</button>
+            <button class="automate-tab px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800"
+              id="automate-tab-py" data-automate-target="automate-py" role="tab" aria-selected="false" aria-controls="automate-py">Python</button>
+            <button class="automate-tab px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800"
+              id="automate-tab-js" data-automate-target="automate-js" role="tab" aria-selected="false" aria-controls="automate-js">JavaScript</button>
+          </div>
+
+          <!-- TypeScript panel -->
+          <div id="automate-ts" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-ts" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity @types/string-similarity</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.ts</span>
+import { test, expect } from '@playwright/test';
+import stringSimilarity from 'string-similarity';
+
+test('AI response is semantically similar to expected output', async ({ page }) => {
+  <span class="text-gray-400">// 1. Navigate to the demo</span>
+  await page.goto('https://buttered-spuds.github.io/ai-non-determinism-demo/');
+
+  <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+  await page.locator('#btn-run-once').click();
+
+  <span class="text-gray-400">// 3. Wait for and capture the response</span>
+  const responseCard = page.locator('.output-card blockquote').first();
+  await expect(responseCard).toBeVisible();
+  const responseText = (await responseCard.textContent() ?? '').replace(/^"|"$/g, '');
+
+  <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
+  const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
+  const similarity = stringSimilarity.compareTwoStrings(responseText, expected);
+
+  <span class="text-gray-400">// compareTwoStrings returns 0–1; assert the response is meaningfully similar</span>
+  expect(similarity, `Response was not similar enough. Got: "${responseText}"`).toBeGreaterThan(0.5);
+});</code></pre>
+          </div>
+
+          <!-- .NET panel -->
+          <div id="automate-dotnet" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-dotnet" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">dotnet add package Microsoft.Playwright.NUnit &amp;&amp; dotnet add package FuzzySharp</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// AutomateAiDemoTests.cs</span>
+using FuzzySharp;
+using Microsoft.Playwright.NUnit;
+using NUnit.Framework;
+
+[Parallelizable(ParallelScope.Self)]
+[TestFixture]
+public class AutomateAiDemoTests : PageTest
+{
+    [Test]
+    public async Task AiResponse_IsSemanticallyClose_ToExpected()
+    {
+        <span class="text-gray-400">// 1. Navigate to the demo</span>
+        await Page.GotoAsync("https://buttered-spuds.github.io/ai-non-determinism-demo/");
+
+        <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+        await Page.Locator("#btn-run-once").ClickAsync();
+
+        <span class="text-gray-400">// 3. Wait for and capture the response</span>
+        var responseCard = Page.Locator(".output-card blockquote").First;
+        await Expect(responseCard).ToBeVisibleAsync();
+        var responseText = (await responseCard.TextContentAsync() ?? "").Trim('"');
+
+        <span class="text-gray-400">// 4. Use FuzzySharp for fuzzy comparison instead of an exact match</span>
+        const string expected = "Automated testing saves time by catching bugs early and reducing manual effort.";
+        int score = Fuzz.TokenSortRatio(responseText, expected);
+
+        <span class="text-gray-400">// Fuzz.TokenSortRatio returns 0–100; assert the response is meaningfully similar</span>
+        Assert.That(score, Is.GreaterThan(50),
+            $"Similarity score {score} is below threshold. Got: \"{responseText}\"");
+    }
+}</code></pre>
+          </div>
+
+          <!-- Python panel -->
+          <div id="automate-py" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-py" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">pip install playwright rapidfuzz &amp;&amp; playwright install</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># test_automate_ai_demo.py</span>
+import re
+from playwright.sync_api import Page, expect
+from rapidfuzz import fuzz
+
+def test_ai_response_is_semantically_close(page: Page):
+    <span class="text-gray-400"># 1. Navigate to the demo</span>
+    page.goto("https://buttered-spuds.github.io/ai-non-determinism-demo/")
+
+    <span class="text-gray-400"># 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+    page.locator("#btn-run-once").click()
+
+    <span class="text-gray-400"># 3. Wait for and capture the response</span>
+    response_card = page.locator(".output-card blockquote").first
+    expect(response_card).to_be_visible()
+    response_text = re.sub(r'^"|"$', "", response_card.text_content() or "")
+
+    <span class="text-gray-400"># 4. Use rapidfuzz for fuzzy comparison instead of an exact match</span>
+    expected = "Automated testing saves time by catching bugs early and reducing manual effort."
+    score = fuzz.token_sort_ratio(response_text, expected)
+
+    <span class="text-gray-400"># token_sort_ratio returns 0–100; assert the response is meaningfully similar</span>
+    assert score > 50, f"Similarity score {score} is below threshold. Got: {response_text!r}"</code></pre>
+          </div>
+
+          <!-- JavaScript panel -->
+          <div id="automate-js" class="automate-panel hidden" role="tabpanel" aria-labelledby="automate-tab-js" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.js</span>
+const { test, expect } = require('@playwright/test');
+const stringSimilarity = require('string-similarity');
+
+test('AI response is semantically similar to expected output', async ({ page }) => {
+  <span class="text-gray-400">// 1. Navigate to the demo</span>
+  await page.goto('https://buttered-spuds.github.io/ai-non-determinism-demo/');
+
+  <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+  await page.locator('#btn-run-once').click();
+
+  <span class="text-gray-400">// 3. Wait for and capture the response</span>
+  const responseCard = page.locator('.output-card blockquote').first();
+  await expect(responseCard).toBeVisible();
+  const responseText = ((await responseCard.textContent()) ?? '').replace(/^"|"$/g, '');
+
+  <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
+  const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
+  const similarity = stringSimilarity.compareTwoStrings(responseText, expected);
+
+  <span class="text-gray-400">// compareTwoStrings returns 0–1; assert the response is meaningfully similar</span>
+  expect(similarity, `Response was not similar enough. Got: "${responseText}"`).toBeGreaterThan(0.5);
+});</code></pre>
+          </div>
+
+        </div><!-- /automate-panel -->
+      </div>
+    </section>
+
   </main>
 
   <!-- ══════════════════════════════════════════════════════════════════════
@@ -447,7 +682,7 @@ def test_summarise_ai():
           target="_blank"
           rel="noopener noreferrer"
           >GitHub Pages</a
-        >.
+        >. Created by Barry Madine — reach out for more help.
       </p>
     </div>
   </footer>
