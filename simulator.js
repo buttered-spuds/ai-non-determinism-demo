@@ -22,15 +22,19 @@
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  /** Similarity badge HTML */
-  function similarityBadge(similarity) {
+  /** Create a similarity badge DOM element */
+  function createSimilarityBadge(similarity) {
     const map = {
       equivalent: { emoji: "🟢", label: "Semantically equivalent", cls: "badge-green" },
       similar:    { emoji: "🟡", label: "Similar but different phrasing", cls: "badge-yellow" },
       divergent:  { emoji: "🔴", label: "Significantly different", cls: "badge-red" },
     };
     const s = map[similarity] || map.similar;
-    return `<span class="badge ${s.cls}" title="${s.label}">${s.emoji} ${s.label}</span>`;
+    const span = document.createElement("span");
+    span.className = `badge ${s.cls}`;
+    span.title = s.label;
+    span.textContent = `${s.emoji} ${s.label}`;
+    return span;
   }
 
   /** Build an output card element */
@@ -38,39 +42,69 @@
     const card = document.createElement("div");
     card.className = "output-card";
     card.style.animationDelay = `${index * 60}ms`;
-    card.innerHTML = `
-      <div class="card-header">
-        <span class="card-label">Output ${index + 1}${total > 1 ? ` of ${total}` : ""}</span>
-        ${similarityBadge(item.similarity)}
-      </div>
-      <blockquote class="card-text">"${item.text}"</blockquote>
-    `;
+
+    const header = document.createElement("div");
+    header.className = "card-header";
+
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "card-label";
+    labelSpan.textContent = `Output ${index + 1}${total > 1 ? ` of ${total}` : ""}`;
+    header.appendChild(labelSpan);
+    header.appendChild(createSimilarityBadge(item.similarity));
+
+    const blockquote = document.createElement("blockquote");
+    blockquote.className = "card-text";
+    blockquote.textContent = `"${item.text}"`;
+
+    card.appendChild(header);
+    card.appendChild(blockquote);
     return card;
   }
 
   /** Build a hallucination card element */
   function buildHallucinationCard(item, index) {
     const labelMap = {
-      correct:       { cls: "h-correct",    icon: "✅", text: "Correct" },
-      "wrong-detail":{ cls: "h-wrong",      icon: "⚠️", text: "Subtly wrong" },
-      misleading:    { cls: "h-misleading", icon: "🟠", text: "Misleading" },
-      "wrong-concept":{ cls: "h-wrong",     icon: "❌", text: "Wrong concept" },
+      correct:        { cls: "h-correct",    icon: "✅", text: "Correct" },
+      "wrong-detail": { cls: "h-wrong",      icon: "⚠️", text: "Subtly wrong" },
+      misleading:     { cls: "h-misleading", icon: "🟠", text: "Misleading" },
+      "wrong-concept":{ cls: "h-wrong",      icon: "❌", text: "Wrong concept" },
     };
     const l = labelMap[item.label] || labelMap.correct;
-    const noteHtml = item.note
-      ? `<p class="h-note"><strong>Note:</strong> ${item.note}</p>`
-      : "";
+
     const card = document.createElement("div");
     card.className = `h-card ${l.cls}`;
     card.style.animationDelay = `${index * 80}ms`;
-    card.innerHTML = `
-      <div class="card-header">
-        <span class="card-label">Attempt ${index + 1}</span>
-        <span class="badge ${l.cls}-badge">${l.icon} ${l.text}</span>
-      </div>
-      <blockquote class="card-text">"${item.text}"</blockquote>
-      ${noteHtml}
-    `;
+
+    const header = document.createElement("div");
+    header.className = "card-header";
+
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "card-label";
+    labelSpan.textContent = `Attempt ${index + 1}`;
+    header.appendChild(labelSpan);
+
+    const badgeSpan = document.createElement("span");
+    badgeSpan.className = `badge ${l.cls}-badge`;
+    badgeSpan.textContent = `${l.icon} ${l.text}`;
+    header.appendChild(badgeSpan);
+
+    const blockquote = document.createElement("blockquote");
+    blockquote.className = "card-text";
+    blockquote.textContent = `"${item.text}"`;
+
+    card.appendChild(header);
+    card.appendChild(blockquote);
+
+    if (item.note) {
+      const noteP = document.createElement("p");
+      noteP.className = "h-note";
+      const strong = document.createElement("strong");
+      strong.textContent = "Note:";
+      noteP.appendChild(strong);
+      noteP.appendChild(document.createTextNode(" " + item.note));
+      card.appendChild(noteP);
+    }
+
     return card;
   }
 
@@ -79,7 +113,7 @@
     const grid = document.getElementById("output-grid");
     grid.innerHTML = "";
     if (mainHistory.length === 0) {
-      grid.innerHTML = `<p class="placeholder-text">Hit <strong>Run Prompt</strong> to see the AI respond…</p>`;
+      grid.innerHTML = `<p class="placeholder-text col-span-full">Hit <strong>Run Prompt</strong> to see the AI respond…</p>`;
       return;
     }
     mainHistory.forEach((item, i) => {
@@ -158,8 +192,14 @@
     // Traditional vs AI toggle
     document.querySelectorAll(".toggle-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".toggle-btn").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
+        document.querySelectorAll(".toggle-btn").forEach((b) => {
+          b.classList.remove("active", "bg-indigo-600", "text-white");
+          b.classList.add("text-gray-500", "hover:text-gray-800");
+          b.setAttribute("aria-selected", "false");
+        });
+        btn.classList.add("active", "bg-indigo-600", "text-white");
+        btn.classList.remove("text-gray-500", "hover:text-gray-800");
+        btn.setAttribute("aria-selected", "true");
         const target = btn.dataset.target;
         document.querySelectorAll(".test-panel").forEach((p) => {
           p.classList.toggle("hidden", p.id !== target);
