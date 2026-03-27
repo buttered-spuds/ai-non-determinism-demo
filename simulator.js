@@ -221,36 +221,6 @@
       });
     });
 
-    // "How to automate this?" accordion
-    const automateToggle = document.getElementById("automate-toggle");
-    const automatePanel  = document.getElementById("automate-panel");
-    if (automateToggle && automatePanel) {
-      automateToggle.addEventListener("click", () => {
-        const isOpen = !automatePanel.classList.contains("hidden");
-        automatePanel.classList.toggle("hidden", isOpen);
-        automateToggle.querySelector(".automate-chevron").textContent = isOpen ? "▸" : "▾";
-        automateToggle.setAttribute("aria-expanded", String(!isOpen));
-      });
-    }
-
-    // "How to automate this?" inner language tabs
-    document.querySelectorAll(".automate-tab").forEach((tab) => {
-      tab.addEventListener("click", () => {
-        document.querySelectorAll(".automate-tab").forEach((t) => {
-          t.classList.remove("active", "bg-indigo-600", "text-white");
-          t.classList.add("text-gray-500", "hover:text-gray-800");
-          t.setAttribute("aria-selected", "false");
-        });
-        tab.classList.add("active", "bg-indigo-600", "text-white");
-        tab.classList.remove("text-gray-500", "hover:text-gray-800");
-        tab.setAttribute("aria-selected", "true");
-        const target = tab.dataset.automateTarget;
-        document.querySelectorAll(".automate-panel").forEach((p) => {
-          p.classList.toggle("hidden", p.id !== target);
-        });
-      });
-    });
-
     // Initial placeholder renders
     renderMainGrid();
     renderHallucinationGrid();

@@ -26,52 +26,49 @@
 
     code { font-family: "Fira Code", monospace; }
 
-    /* Tab styles */
-    .lang-tab {
-      padding: 8px 18px;
-      border-radius: 6px 6px 0 0;
+    /* Language tab bar */
+    .automate-tab {
+      padding: 6px 16px;
+      border-radius: 8px;
       font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
       border: none;
-      background: transparent;
-      color: #6b7280;
-      transition: color 0.15s, background 0.15s;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -1px;
+      transition: background 0.15s, color 0.15s;
     }
-    .lang-tab:hover { color: #4f46e5; }
-    .lang-tab.active {
-      color: #4f46e5;
-      border-bottom: 2px solid #4f46e5;
-      background: #fff;
-    }
+    .automate-tab.active  { background: #4f46e5; color: #fff; }
+    .automate-tab:not(.active) { background: transparent; color: #6b7280; }
+    .automate-tab:not(.active):hover { color: #111827; }
 
-    .code-panel { display: none; }
-    .code-panel.active { display: block; }
-
-    /* Code blocks */
-    pre {
-      background: #0f172a;
-      color: #e2e8f0;
-      border-radius: 0 0 12px 12px;
-      padding: 1.5rem;
-      font-size: 0.82rem;
-      line-height: 1.7;
-      overflow-x: auto;
-      margin: 0;
-    }
-
-    .token-comment  { color: #64748b; }
-    .token-keyword  { color: #93c5fd; }
-    .token-string   { color: #86efac; }
-    .token-fn       { color: #fde68a; }
-    .token-type     { color: #c4b5fd; }
-    .token-num      { color: #fb923c; }
+    .automate-panel { display: none; }
+    .automate-panel.active-panel { display: block; }
   </style>
 </head>
 
 <body class="bg-gray-50 text-gray-900 antialiased">
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       TOP NAVIGATION
+  ══════════════════════════════════════════════════════════════════════ -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm" aria-label="Site navigation">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="flex items-center gap-1 h-14">
+        <a
+          href="index.html"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+        >
+          🔁 Demo
+        </a>
+        <a
+          href="automation.html"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700"
+          aria-current="page"
+        >
+          🤖 How to Automate?
+        </a>
+      </div>
+    </div>
+  </nav>
 
   <!-- ══════════════════════════════════════════════════════════════════════
        HERO
@@ -85,437 +82,188 @@
         How to Automate This?
       </h1>
       <p class="text-lg sm:text-xl text-indigo-100 max-w-2xl mx-auto">
-        Use Playwright to navigate to the demo and write assertions that handle
-        non-deterministic AI outputs — instead of brittle exact-match checks.
+        Playwright examples for testing non-deterministic AI UIs across TypeScript, .NET, Python, and JavaScript.
       </p>
-      <a
-        href="index.html"
-        class="inline-flex items-center gap-2 mt-8 px-5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-sm border border-white/30 transition-colors"
-      >
-        ← Back to the demo
-      </a>
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-6 py-14 space-y-16">
+  <main class="max-w-5xl mx-auto px-6 py-14 space-y-10">
 
     <!-- ══════════════════════════════════════════════════════════════════
          INTRO
     ══════════════════════════════════════════════════════════════════ -->
     <section>
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        <h2 class="text-xl font-bold text-gray-800 mb-3">Getting started</h2>
-        <p class="text-gray-600 text-sm leading-relaxed mb-4">
-          To automate interactions with this demo, point Playwright at the page URL, interact
-          with the simulator controls, and assert on the <em>shape</em> of the output rather
-          than its exact text. Because the responses are non-deterministic by design, your
-          assertions should check structural properties — word count, keyword presence, semantic
-          meaning — rather than an exact string match.
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-4 text-sm text-gray-600 leading-relaxed">
+        <p>
+          Start by navigating to the deployed URL as the first step in your test — for example, using a
+          <code class="bg-gray-100 px-1 rounded">goto</code> (or <code class="bg-gray-100 px-1 rounded">GotoAsync</code>) step in Playwright.
         </p>
-        <ol class="list-decimal list-inside text-sm text-gray-600 space-y-1 leading-relaxed">
-          <li>Install Playwright for your language of choice (see tabs below).</li>
-          <li>Navigate to the demo URL using <code class="bg-gray-100 px-1 rounded">page.goto()</code>.</li>
-          <li>Click <strong>Run Prompt</strong> or <strong>Run 10 Times</strong> to trigger responses.</li>
-          <li>Assert on output cards using semantic or constraint-based checks.</li>
-        </ol>
+        <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-indigo-800">
+          <strong>The core challenge:</strong> AI responses are non-deterministic — the same prompt will produce
+          different (but often equally valid) answers on every run. Exact string matching will cause your tests
+          to fail even when the AI is working correctly. Instead, use a
+          <strong>semantic or fuzzy comparison</strong> library to assert that the response is
+          <em>close enough</em> to an expected value.
+        </div>
+        <p>
+          The examples below show how to navigate to this demo, click the button to get a response, and
+          assert that the output is meaningfully similar to a reference answer — rather than requiring an
+          exact match.
+        </p>
       </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         INSTALLATION
+         CODE EXAMPLES
     ══════════════════════════════════════════════════════════════════ -->
-    <section aria-labelledby="install-heading">
-      <h2 id="install-heading" class="text-2xl font-bold mb-1">Install Playwright</h2>
-      <p class="text-gray-500 mb-6 text-sm">
-        Choose your language and follow the installation steps.
-      </p>
+    <section aria-labelledby="examples-heading">
+      <h2 id="examples-heading" class="text-2xl font-bold mb-6">Playwright examples</h2>
 
-      <!-- Tab bar -->
-      <div class="bg-white rounded-t-2xl border border-b-0 border-gray-200 px-4 pt-3 flex gap-1" role="tablist" aria-label="Language">
-        <button class="lang-tab active" data-lang="install" data-tab="install-ts"   role="tab" aria-selected="true"  aria-controls="install-ts">TypeScript</button>
-        <button class="lang-tab"        data-lang="install" data-tab="install-dotnet" role="tab" aria-selected="false" aria-controls="install-dotnet">.NET (C#)</button>
-        <button class="lang-tab"        data-lang="install" data-tab="install-py"   role="tab" aria-selected="false" aria-controls="install-py">Python</button>
-        <button class="lang-tab"        data-lang="install" data-tab="install-js"   role="tab" aria-selected="false" aria-controls="install-js">JavaScript</button>
-      </div>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
-      <!-- TypeScript -->
-      <div id="install-ts" class="code-panel active border border-gray-200">
-        <pre><code><span class="token-comment"># Create a new project and install Playwright</span>
-npm init playwright@latest
+        <!-- Tab bar -->
+        <div class="px-6 pt-5 pb-3 border-b border-gray-100">
+          <div class="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-1" role="tablist" aria-label="Language examples">
+            <button class="automate-tab active"
+              id="automate-tab-ts" data-automate-target="automate-ts" role="tab" aria-selected="true" aria-controls="automate-ts">TypeScript</button>
+            <button class="automate-tab"
+              id="automate-tab-dotnet" data-automate-target="automate-dotnet" role="tab" aria-selected="false" aria-controls="automate-dotnet">.NET (C#)</button>
+            <button class="automate-tab"
+              id="automate-tab-py" data-automate-target="automate-py" role="tab" aria-selected="false" aria-controls="automate-py">Python</button>
+            <button class="automate-tab"
+              id="automate-tab-js" data-automate-target="automate-js" role="tab" aria-selected="false" aria-controls="automate-js">JavaScript</button>
+          </div>
+        </div>
 
-<span class="token-comment"># Or add to an existing project</span>
-npm install --save-dev @playwright/test
-npx playwright install</code></pre>
-      </div>
+        <div class="px-6 pb-6 pt-4 space-y-4 text-sm text-gray-600">
 
-      <!-- .NET -->
-      <div id="install-dotnet" class="code-panel border border-gray-200">
-        <pre><code><span class="token-comment"># Create a new NUnit test project</span>
-dotnet new nunit -n PlaywrightTests
-cd PlaywrightTests
+          <!-- TypeScript panel -->
+          <div id="automate-ts" class="automate-panel active-panel" role="tabpanel" aria-labelledby="automate-tab-ts" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity @types/string-similarity</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.ts</span>
+import { test, expect } from '@playwright/test';
+import stringSimilarity from 'string-similarity';
 
-<span class="token-comment"># Add the Playwright NUnit package</span>
-dotnet add package Microsoft.Playwright.NUnit
+test('AI response is semantically similar to expected output', async ({ page }) => {
+  <span class="text-gray-400">// 1. Navigate to the demo</span>
+  await page.goto('https://buttered-spuds.github.io/ai-non-determinism-demo/');
 
-<span class="token-comment"># Install browser binaries</span>
-pwsh bin/Debug/net8.0/playwright.ps1 install</code></pre>
-      </div>
+  <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+  await page.locator('#btn-run-once').click();
 
-      <!-- Python -->
-      <div id="install-py" class="code-panel border border-gray-200">
-        <pre><code><span class="token-comment"># Install the Playwright Python package</span>
-pip install pytest-playwright
+  <span class="text-gray-400">// 3. Wait for and capture the response</span>
+  const responseCard = page.locator('.output-card blockquote').first();
+  await expect(responseCard).toBeVisible();
+  const responseText = (await responseCard.textContent() ?? '').replace(/^"|"$/g, '');
 
-<span class="token-comment"># Install browser binaries</span>
-playwright install</code></pre>
-      </div>
+  <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
+  const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
+  const similarity = stringSimilarity.compareTwoStrings(responseText, expected);
 
-      <!-- JavaScript -->
-      <div id="install-js" class="code-panel border border-gray-200">
-        <pre><code><span class="token-comment"># Create a new project and install Playwright</span>
-npm init playwright@latest
-
-<span class="token-comment"># Or add to an existing JavaScript project</span>
-npm install --save-dev @playwright/test
-npx playwright install</code></pre>
-      </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════════════════════════════
-         BASIC NAVIGATION
-    ══════════════════════════════════════════════════════════════════ -->
-    <section aria-labelledby="nav-heading">
-      <h2 id="nav-heading" class="text-2xl font-bold mb-1">Navigate to the demo</h2>
-      <p class="text-gray-500 mb-6 text-sm">
-        Open the simulator page and click <strong>Run Prompt</strong> to trigger a response.
-        Replace the URL with your deployed GitHub Pages address.
-      </p>
-
-      <!-- Tab bar -->
-      <div class="bg-white rounded-t-2xl border border-b-0 border-gray-200 px-4 pt-3 flex gap-1" role="tablist" aria-label="Language">
-        <button class="lang-tab active" data-lang="nav" data-tab="nav-ts"     role="tab" aria-selected="true"  aria-controls="nav-ts">TypeScript</button>
-        <button class="lang-tab"        data-lang="nav" data-tab="nav-dotnet" role="tab" aria-selected="false" aria-controls="nav-dotnet">.NET (C#)</button>
-        <button class="lang-tab"        data-lang="nav" data-tab="nav-py"     role="tab" aria-selected="false" aria-controls="nav-py">Python</button>
-        <button class="lang-tab"        data-lang="nav" data-tab="nav-js"     role="tab" aria-selected="false" aria-controls="nav-js">JavaScript</button>
-      </div>
-
-      <!-- TypeScript -->
-      <div id="nav-ts" class="code-panel active border border-gray-200">
-        <pre><code><span class="token-keyword">import</span> { test, expect } <span class="token-keyword">from</span> <span class="token-string">'@playwright/test'</span>;
-
-<span class="token-fn">test</span>(<span class="token-string">'navigate to demo and run prompt'</span>, <span class="token-keyword">async</span> ({ page }) => {
-  <span class="token-comment">// Navigate to the demo page</span>
-  <span class="token-keyword">await</span> page.<span class="token-fn">goto</span>(<span class="token-string">'https://buttered-spuds.github.io/ai-non-determinism-demo/'</span>);
-
-  <span class="token-comment">// Click the Run Prompt button</span>
-  <span class="token-keyword">await</span> page.<span class="token-fn">getByRole</span>(<span class="token-string">'button'</span>, { name: <span class="token-string">'Run Prompt'</span> }).<span class="token-fn">click</span>();
-
-  <span class="token-comment">// Wait for a response card to appear</span>
-  <span class="token-keyword">await</span> <span class="token-fn">expect</span>(page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>)).<span class="token-fn">toBeVisible</span>();
+  <span class="text-gray-400">// compareTwoStrings returns 0–1; assert the response is meaningfully similar</span>
+  expect(similarity, `Response was not similar enough. Got: "${responseText}"`).toBeGreaterThan(0.5);
 });</code></pre>
-      </div>
+          </div>
 
-      <!-- .NET -->
-      <div id="nav-dotnet" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">using</span> Microsoft.Playwright.NUnit;
-<span class="token-keyword">using</span> NUnit.Framework;
+          <!-- .NET panel -->
+          <div id="automate-dotnet" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-dotnet" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">dotnet add package Microsoft.Playwright.NUnit</code> then <code class="bg-gray-100 px-1 rounded">dotnet add package FuzzySharp</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// AutomateAiDemoTests.cs</span>
+using FuzzySharp;
+using Microsoft.Playwright.NUnit;
+using NUnit.Framework;
 
-[<span class="token-type">Parallelizable</span>(ParallelScope.Self)]
-[<span class="token-type">TestFixture</span>]
-<span class="token-keyword">public class</span> <span class="token-type">DemoTests</span> : <span class="token-type">PageTest</span>
+[Parallelizable(ParallelScope.Self)]
+[TestFixture]
+public class AutomateAiDemoTests : PageTest
 {
-    [<span class="token-type">Test</span>]
-    <span class="token-keyword">public async</span> <span class="token-type">Task</span> <span class="token-fn">NavigateToDemoAndRunPrompt</span>()
+    [Test]
+    public async Task AiResponse_IsSemanticallyClose_ToExpected()
     {
-        <span class="token-comment">// Navigate to the demo page</span>
-        <span class="token-keyword">await</span> Page.<span class="token-fn">GotoAsync</span>(<span class="token-string">"https://buttered-spuds.github.io/ai-non-determinism-demo/"</span>);
+        <span class="text-gray-400">// 1. Navigate to the demo</span>
+        await Page.GotoAsync("https://buttered-spuds.github.io/ai-non-determinism-demo/");
 
-        <span class="token-comment">// Click the Run Prompt button</span>
-        <span class="token-keyword">await</span> Page.<span class="token-fn">GetByRole</span>(AriaRole.Button, <span class="token-keyword">new</span> () { Name = <span class="token-string">"Run Prompt"</span> }).<span class="token-fn">ClickAsync</span>();
+        <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+        await Page.Locator("#btn-run-once").ClickAsync();
 
-        <span class="token-comment">// Wait for a response card to appear</span>
-        <span class="token-keyword">await</span> <span class="token-fn">Expect</span>(Page.<span class="token-fn">Locator</span>(<span class="token-string">".output-card"</span>)).<span class="token-fn">ToBeVisibleAsync</span>();
+        <span class="text-gray-400">// 3. Wait for and capture the response</span>
+        var responseCard = Page.Locator(".output-card blockquote").First;
+        await Expect(responseCard).ToBeVisibleAsync();
+        var responseText = (await responseCard.TextContentAsync() ?? "").Trim('"');
+
+        <span class="text-gray-400">// 4. Use FuzzySharp for fuzzy comparison instead of an exact match</span>
+        const string expected = "Automated testing saves time by catching bugs early and reducing manual effort.";
+        int score = Fuzz.TokenSortRatio(responseText, expected);
+
+        <span class="text-gray-400">// Fuzz.TokenSortRatio returns 0–100; assert the response is meaningfully similar</span>
+        Assert.That(score, Is.GreaterThan(50),
+            $"Similarity score {score} is below threshold. Got: \"{responseText}\"");
     }
 }</code></pre>
-      </div>
+          </div>
 
-      <!-- Python -->
-      <div id="nav-py" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">import</span> pytest
-<span class="token-keyword">from</span> playwright.sync_api <span class="token-keyword">import</span> Page, expect
+          <!-- Python panel -->
+          <div id="automate-py" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-py" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">pip install playwright rapidfuzz</code> then <code class="bg-gray-100 px-1 rounded">playwright install</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># test_automate_ai_demo.py</span>
+import re
+from playwright.sync_api import Page, expect
+from rapidfuzz import fuzz
 
-<span class="token-keyword">def</span> <span class="token-fn">test_navigate_to_demo_and_run_prompt</span>(page: <span class="token-type">Page</span>):
-    <span class="token-comment"># Navigate to the demo page</span>
-    page.<span class="token-fn">goto</span>(<span class="token-string">"https://buttered-spuds.github.io/ai-non-determinism-demo/"</span>)
+def test_ai_response_is_semantically_close(page: Page):
+    <span class="text-gray-400"># 1. Navigate to the demo</span>
+    page.goto("https://buttered-spuds.github.io/ai-non-determinism-demo/")
 
-    <span class="token-comment"># Click the Run Prompt button</span>
-    page.<span class="token-fn">get_by_role</span>(<span class="token-string">"button"</span>, name=<span class="token-string">"Run Prompt"</span>).<span class="token-fn">click</span>()
+    <span class="text-gray-400"># 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+    page.locator("#btn-run-once").click()
 
-    <span class="token-comment"># Wait for a response card to appear</span>
-    <span class="token-fn">expect</span>(page.<span class="token-fn">locator</span>(<span class="token-string">".output-card"</span>)).<span class="token-fn">to_be_visible</span>()</code></pre>
-      </div>
+    <span class="text-gray-400"># 3. Wait for and capture the response</span>
+    response_card = page.locator(".output-card blockquote").first
+    expect(response_card).to_be_visible()
+    response_text = re.sub(r'^"|"$', "", response_card.text_content() or "")
 
-      <!-- JavaScript -->
-      <div id="nav-js" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">const</span> { test, expect } = <span class="token-fn">require</span>(<span class="token-string">'@playwright/test'</span>);
+    <span class="text-gray-400"># 4. Use rapidfuzz for fuzzy comparison instead of an exact match</span>
+    expected = "Automated testing saves time by catching bugs early and reducing manual effort."
+    score = fuzz.token_sort_ratio(response_text, expected)
 
-<span class="token-fn">test</span>(<span class="token-string">'navigate to demo and run prompt'</span>, <span class="token-keyword">async</span> ({ page }) => {
-  <span class="token-comment">// Navigate to the demo page</span>
-  <span class="token-keyword">await</span> page.<span class="token-fn">goto</span>(<span class="token-string">'https://buttered-spuds.github.io/ai-non-determinism-demo/'</span>);
+    <span class="text-gray-400"># token_sort_ratio returns 0–100; assert the response is meaningfully similar</span>
+    assert score > 50, f"Similarity score {score} is below threshold. Got: {response_text!r}"</code></pre>
+          </div>
 
-  <span class="token-comment">// Click the Run Prompt button</span>
-  <span class="token-keyword">await</span> page.<span class="token-fn">getByRole</span>(<span class="token-string">'button'</span>, { name: <span class="token-string">'Run Prompt'</span> }).<span class="token-fn">click</span>();
+          <!-- JavaScript panel -->
+          <div id="automate-js" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-js" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.js</span>
+const { test, expect } = require('@playwright/test');
+const stringSimilarity = require('string-similarity');
 
-  <span class="token-comment">// Wait for a response card to appear</span>
-  <span class="token-keyword">await</span> <span class="token-fn">expect</span>(page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>)).<span class="token-fn">toBeVisible</span>();
+test('AI response is semantically similar to expected output', async ({ page }) => {
+  <span class="text-gray-400">// 1. Navigate to the demo</span>
+  await page.goto('https://buttered-spuds.github.io/ai-non-determinism-demo/');
+
+  <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+  await page.locator('#btn-run-once').click();
+
+  <span class="text-gray-400">// 3. Wait for and capture the response</span>
+  const responseCard = page.locator('.output-card blockquote').first();
+  await expect(responseCard).toBeVisible();
+  const responseText = ((await responseCard.textContent()) ?? '').replace(/^"|"$/g, '');
+
+  <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
+  const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
+  const similarity = stringSimilarity.compareTwoStrings(responseText, expected);
+
+  <span class="text-gray-400">// compareTwoStrings returns 0–1; assert the response is meaningfully similar</span>
+  expect(similarity, `Response was not similar enough. Got: "${responseText}"`).toBeGreaterThan(0.5);
 });</code></pre>
+          </div>
+
+        </div>
       </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════════════════
-         SEMANTIC ASSERTIONS
-    ══════════════════════════════════════════════════════════════════ -->
-    <section aria-labelledby="assert-heading">
-      <h2 id="assert-heading" class="text-2xl font-bold mb-1">Write AI-aware assertions</h2>
-      <p class="text-gray-500 mb-6 text-sm">
-        Instead of asserting on exact text, check structural properties of the output —
-        length, keyword presence, and the absence of error states.
-      </p>
-
-      <!-- Tab bar -->
-      <div class="bg-white rounded-t-2xl border border-b-0 border-gray-200 px-4 pt-3 flex gap-1" role="tablist" aria-label="Language">
-        <button class="lang-tab active" data-lang="assert" data-tab="assert-ts"     role="tab" aria-selected="true"  aria-controls="assert-ts">TypeScript</button>
-        <button class="lang-tab"        data-lang="assert" data-tab="assert-dotnet" role="tab" aria-selected="false" aria-controls="assert-dotnet">.NET (C#)</button>
-        <button class="lang-tab"        data-lang="assert" data-tab="assert-py"     role="tab" aria-selected="false" aria-controls="assert-py">Python</button>
-        <button class="lang-tab"        data-lang="assert" data-tab="assert-js"     role="tab" aria-selected="false" aria-controls="assert-js">JavaScript</button>
-      </div>
-
-      <!-- TypeScript -->
-      <div id="assert-ts" class="code-panel active border border-gray-200">
-        <pre><code><span class="token-keyword">import</span> { test, expect } <span class="token-keyword">from</span> <span class="token-string">'@playwright/test'</span>;
-
-<span class="token-fn">test</span>(<span class="token-string">'output card contains meaningful content'</span>, <span class="token-keyword">async</span> ({ page }) => {
-  <span class="token-keyword">await</span> page.<span class="token-fn">goto</span>(<span class="token-string">'https://buttered-spuds.github.io/ai-non-determinism-demo/'</span>);
-  <span class="token-keyword">await</span> page.<span class="token-fn">getByRole</span>(<span class="token-string">'button'</span>, { name: <span class="token-string">'Run Prompt'</span> }).<span class="token-fn">click</span>();
-
-  <span class="token-keyword">const</span> card = page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>).<span class="token-fn">first</span>();
-  <span class="token-keyword">const</span> text = <span class="token-keyword">await</span> card.<span class="token-fn">textContent</span>() ?? <span class="token-string">''</span>;
-
-  <span class="token-comment">// Constraint-based assertions — no exact match needed</span>
-  <span class="token-fn">expect</span>(text.<span class="token-fn">trim</span>().length).<span class="token-fn">toBeGreaterThan</span>(<span class="token-num">10</span>);
-  <span class="token-fn">expect</span>(text.split(<span class="token-string">' '</span>).length).<span class="token-fn">toBeLessThan</span>(<span class="token-num">80</span>);
-
-  <span class="token-comment">// Keyword presence (case-insensitive)</span>
-  <span class="token-keyword">const</span> keywords = [<span class="token-string">'testing'</span>, <span class="token-string">'bugs'</span>, <span class="token-string">'quality'</span>, <span class="token-string">'automation'</span>, <span class="token-string">'software'</span>];
-  <span class="token-keyword">const</span> hasKeyword = keywords.<span class="token-fn">some</span>(kw => text.<span class="token-fn">toLowerCase</span>().<span class="token-fn">includes</span>(kw));
-  <span class="token-fn">expect</span>(hasKeyword).<span class="token-fn">toBe</span>(<span class="token-keyword">true</span>);
-});</code></pre>
-      </div>
-
-      <!-- .NET -->
-      <div id="assert-dotnet" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">using</span> Microsoft.Playwright.NUnit;
-<span class="token-keyword">using</span> NUnit.Framework;
-
-[<span class="token-type">TestFixture</span>]
-<span class="token-keyword">public class</span> <span class="token-type">AssertionTests</span> : <span class="token-type">PageTest</span>
-{
-    [<span class="token-type">Test</span>]
-    <span class="token-keyword">public async</span> <span class="token-type">Task</span> <span class="token-fn">OutputCardContainsMeaningfulContent</span>()
-    {
-        <span class="token-keyword">await</span> Page.<span class="token-fn">GotoAsync</span>(<span class="token-string">"https://buttered-spuds.github.io/ai-non-determinism-demo/"</span>);
-        <span class="token-keyword">await</span> Page.<span class="token-fn">GetByRole</span>(AriaRole.Button, <span class="token-keyword">new</span> () { Name = <span class="token-string">"Run Prompt"</span> }).<span class="token-fn">ClickAsync</span>();
-
-        <span class="token-keyword">var</span> card = Page.<span class="token-fn">Locator</span>(<span class="token-string">".output-card"</span>).<span class="token-fn">First</span>;
-        <span class="token-keyword">var</span> text = <span class="token-keyword">await</span> card.<span class="token-fn">TextContentAsync</span>() ?? <span class="token-string">""</span>;
-
-        <span class="token-comment">// Constraint-based assertions — no exact match needed</span>
-        Assert.<span class="token-fn">Greater</span>(text.<span class="token-fn">Trim</span>().Length, <span class="token-num">10</span>);
-        Assert.<span class="token-fn">Less</span>(text.<span class="token-fn">Split</span>(<span class="token-string">' '</span>).Length, <span class="token-num">80</span>);
-
-        <span class="token-comment">// Keyword presence (case-insensitive)</span>
-        <span class="token-keyword">string</span>[] keywords = { <span class="token-string">"testing"</span>, <span class="token-string">"bugs"</span>, <span class="token-string">"quality"</span>, <span class="token-string">"automation"</span>, <span class="token-string">"software"</span> };
-        <span class="token-keyword">bool</span> hasKeyword = keywords.<span class="token-fn">Any</span>(kw => text.<span class="token-fn">ToLower</span>().<span class="token-fn">Contains</span>(kw));
-        Assert.<span class="token-fn">IsTrue</span>(hasKeyword);
-    }
-}</code></pre>
-      </div>
-
-      <!-- Python -->
-      <div id="assert-py" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">from</span> playwright.sync_api <span class="token-keyword">import</span> Page, expect
-
-<span class="token-keyword">def</span> <span class="token-fn">test_output_card_contains_meaningful_content</span>(page: <span class="token-type">Page</span>):
-    page.<span class="token-fn">goto</span>(<span class="token-string">"https://buttered-spuds.github.io/ai-non-determinism-demo/"</span>)
-    page.<span class="token-fn">get_by_role</span>(<span class="token-string">"button"</span>, name=<span class="token-string">"Run Prompt"</span>).<span class="token-fn">click</span>()
-
-    card = page.<span class="token-fn">locator</span>(<span class="token-string">".output-card"</span>).<span class="token-fn">first</span>
-    text = card.<span class="token-fn">text_content</span>() <span class="token-keyword">or</span> <span class="token-string">""</span>
-
-    <span class="token-comment"># Constraint-based assertions — no exact match needed</span>
-    <span class="token-keyword">assert</span> <span class="token-fn">len</span>(text.<span class="token-fn">strip</span>()) > <span class="token-num">10</span>
-    <span class="token-keyword">assert</span> <span class="token-fn">len</span>(text.<span class="token-fn">split</span>()) < <span class="token-num">80</span>
-
-    <span class="token-comment"># Keyword presence (case-insensitive)</span>
-    keywords = [<span class="token-string">"testing"</span>, <span class="token-string">"bugs"</span>, <span class="token-string">"quality"</span>, <span class="token-string">"automation"</span>, <span class="token-string">"software"</span>]
-    <span class="token-keyword">assert</span> <span class="token-fn">any</span>(kw <span class="token-keyword">in</span> text.<span class="token-fn">lower</span>() <span class="token-keyword">for</span> kw <span class="token-keyword">in</span> keywords)</code></pre>
-      </div>
-
-      <!-- JavaScript -->
-      <div id="assert-js" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">const</span> { test, expect } = <span class="token-fn">require</span>(<span class="token-string">'@playwright/test'</span>);
-
-<span class="token-fn">test</span>(<span class="token-string">'output card contains meaningful content'</span>, <span class="token-keyword">async</span> ({ page }) => {
-  <span class="token-keyword">await</span> page.<span class="token-fn">goto</span>(<span class="token-string">'https://buttered-spuds.github.io/ai-non-determinism-demo/'</span>);
-  <span class="token-keyword">await</span> page.<span class="token-fn">getByRole</span>(<span class="token-string">'button'</span>, { name: <span class="token-string">'Run Prompt'</span> }).<span class="token-fn">click</span>();
-
-  <span class="token-keyword">const</span> card = page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>).<span class="token-fn">first</span>();
-  <span class="token-keyword">const</span> text = <span class="token-keyword">await</span> card.<span class="token-fn">textContent</span>() ?? <span class="token-string">''</span>;
-
-  <span class="token-comment">// Constraint-based assertions — no exact match needed</span>
-  <span class="token-fn">expect</span>(text.<span class="token-fn">trim</span>().length).<span class="token-fn">toBeGreaterThan</span>(<span class="token-num">10</span>);
-  <span class="token-fn">expect</span>(text.split(<span class="token-string">' '</span>).length).<span class="token-fn">toBeLessThan</span>(<span class="token-num">80</span>);
-
-  <span class="token-comment">// Keyword presence (case-insensitive)</span>
-  <span class="token-keyword">const</span> keywords = [<span class="token-string">'testing'</span>, <span class="token-string">'bugs'</span>, <span class="token-string">'quality'</span>, <span class="token-string">'automation'</span>, <span class="token-string">'software'</span>];
-  <span class="token-keyword">const</span> hasKeyword = keywords.<span class="token-fn">some</span>(kw => text.<span class="token-fn">toLowerCase</span>().<span class="token-fn">includes</span>(kw));
-  <span class="token-fn">expect</span>(hasKeyword).<span class="token-fn">toBe</span>(<span class="token-keyword">true</span>);
-});</code></pre>
-      </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════════════════════════════
-         RUN 10 TIMES
-    ══════════════════════════════════════════════════════════════════ -->
-    <section aria-labelledby="ten-heading">
-      <h2 id="ten-heading" class="text-2xl font-bold mb-1">Assert on statistical distributions</h2>
-      <p class="text-gray-500 mb-6 text-sm">
-        Click <strong>Run 10 Times</strong> and assert that a proportion of cards pass your quality bar.
-        This mirrors real-world AI test strategies where you run many samples and accept a pass rate threshold.
-      </p>
-
-      <!-- Tab bar -->
-      <div class="bg-white rounded-t-2xl border border-b-0 border-gray-200 px-4 pt-3 flex gap-1" role="tablist" aria-label="Language">
-        <button class="lang-tab active" data-lang="ten" data-tab="ten-ts"     role="tab" aria-selected="true"  aria-controls="ten-ts">TypeScript</button>
-        <button class="lang-tab"        data-lang="ten" data-tab="ten-dotnet" role="tab" aria-selected="false" aria-controls="ten-dotnet">.NET (C#)</button>
-        <button class="lang-tab"        data-lang="ten" data-tab="ten-py"     role="tab" aria-selected="false" aria-controls="ten-py">Python</button>
-        <button class="lang-tab"        data-lang="ten" data-tab="ten-js"     role="tab" aria-selected="false" aria-controls="ten-js">JavaScript</button>
-      </div>
-
-      <!-- TypeScript -->
-      <div id="ten-ts" class="code-panel active border border-gray-200">
-        <pre><code><span class="token-keyword">import</span> { test, expect } <span class="token-keyword">from</span> <span class="token-string">'@playwright/test'</span>;
-
-<span class="token-fn">test</span>(<span class="token-string">'at least 80 % of 10 responses contain relevant keywords'</span>, <span class="token-keyword">async</span> ({ page }) => {
-  <span class="token-keyword">await</span> page.<span class="token-fn">goto</span>(<span class="token-string">'https://buttered-spuds.github.io/ai-non-determinism-demo/'</span>);
-  <span class="token-keyword">await</span> page.<span class="token-fn">getByRole</span>(<span class="token-string">'button'</span>, { name: <span class="token-string">'Run 10 Times'</span> }).<span class="token-fn">click</span>();
-
-  <span class="token-comment">// Wait until all 10 cards are rendered</span>
-  <span class="token-keyword">await</span> <span class="token-fn">expect</span>(page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>)).<span class="token-fn">toHaveCount</span>(<span class="token-num">10</span>);
-
-  <span class="token-keyword">const</span> cards  = page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>);
-  <span class="token-keyword">const</span> count  = <span class="token-keyword">await</span> cards.<span class="token-fn">count</span>();
-  <span class="token-keyword">const</span> keywords = [<span class="token-string">'testing'</span>, <span class="token-string">'bugs'</span>, <span class="token-string">'quality'</span>, <span class="token-string">'automation'</span>];
-
-  <span class="token-keyword">let</span> passing = <span class="token-num">0</span>;
-  <span class="token-keyword">for</span> (<span class="token-keyword">let</span> i = <span class="token-num">0</span>; i &lt; count; i++) {
-    <span class="token-keyword">const</span> text = (<span class="token-keyword">await</span> cards.<span class="token-fn">nth</span>(i).<span class="token-fn">textContent</span>() ?? <span class="token-string">''</span>).<span class="token-fn">toLowerCase</span>();
-    <span class="token-keyword">if</span> (keywords.<span class="token-fn">some</span>(kw => text.<span class="token-fn">includes</span>(kw))) passing++;
-  }
-
-  <span class="token-comment">// Statistical assertion — expect ≥ 80 % pass rate</span>
-  <span class="token-fn">expect</span>(passing / count).<span class="token-fn">toBeGreaterThanOrEqual</span>(<span class="token-num">0.8</span>);
-});</code></pre>
-      </div>
-
-      <!-- .NET -->
-      <div id="ten-dotnet" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">using</span> Microsoft.Playwright.NUnit;
-<span class="token-keyword">using</span> NUnit.Framework;
-
-[<span class="token-type">TestFixture</span>]
-<span class="token-keyword">public class</span> <span class="token-type">StatisticalTests</span> : <span class="token-type">PageTest</span>
-{
-    [<span class="token-type">Test</span>]
-    <span class="token-keyword">public async</span> <span class="token-type">Task</span> <span class="token-fn">AtLeast80PercentOfResponsesContainKeywords</span>()
-    {
-        <span class="token-keyword">await</span> Page.<span class="token-fn">GotoAsync</span>(<span class="token-string">"https://buttered-spuds.github.io/ai-non-determinism-demo/"</span>);
-        <span class="token-keyword">await</span> Page.<span class="token-fn">GetByRole</span>(AriaRole.Button, <span class="token-keyword">new</span> () { Name = <span class="token-string">"Run 10 Times"</span> }).<span class="token-fn">ClickAsync</span>();
-
-        <span class="token-comment">// Wait until all 10 cards are rendered</span>
-        <span class="token-keyword">await</span> <span class="token-fn">Expect</span>(Page.<span class="token-fn">Locator</span>(<span class="token-string">".output-card"</span>)).<span class="token-fn">ToHaveCountAsync</span>(<span class="token-num">10</span>);
-
-        <span class="token-keyword">var</span> cards    = Page.<span class="token-fn">Locator</span>(<span class="token-string">".output-card"</span>);
-        <span class="token-keyword">var</span> count    = <span class="token-keyword">await</span> cards.<span class="token-fn">CountAsync</span>();
-        <span class="token-keyword">string</span>[] keywords = { <span class="token-string">"testing"</span>, <span class="token-string">"bugs"</span>, <span class="token-string">"quality"</span>, <span class="token-string">"automation"</span> };
-
-        <span class="token-keyword">int</span> passing = <span class="token-num">0</span>;
-        <span class="token-keyword">for</span> (<span class="token-keyword">int</span> i = <span class="token-num">0</span>; i &lt; count; i++)
-        {
-            <span class="token-keyword">var</span> text = (<span class="token-keyword">await</span> cards.<span class="token-fn">Nth</span>(i).<span class="token-fn">TextContentAsync</span>() ?? <span class="token-string">""</span>).<span class="token-fn">ToLower</span>();
-            <span class="token-keyword">if</span> (keywords.<span class="token-fn">Any</span>(kw => text.<span class="token-fn">Contains</span>(kw))) passing++;
-        }
-
-        <span class="token-comment">// Statistical assertion — expect ≥ 80 % pass rate</span>
-        Assert.<span class="token-fn">GreaterOrEqual</span>((<span class="token-keyword">double</span>)passing / count, <span class="token-num">0.8</span>);
-    }
-}</code></pre>
-      </div>
-
-      <!-- Python -->
-      <div id="ten-py" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">from</span> playwright.sync_api <span class="token-keyword">import</span> Page, expect
-
-<span class="token-keyword">def</span> <span class="token-fn">test_at_least_80_percent_of_responses_contain_keywords</span>(page: <span class="token-type">Page</span>):
-    page.<span class="token-fn">goto</span>(<span class="token-string">"https://buttered-spuds.github.io/ai-non-determinism-demo/"</span>)
-    page.<span class="token-fn">get_by_role</span>(<span class="token-string">"button"</span>, name=<span class="token-string">"Run 10 Times"</span>).<span class="token-fn">click</span>()
-
-    <span class="token-comment"># Wait until all 10 cards are rendered</span>
-    <span class="token-fn">expect</span>(page.<span class="token-fn">locator</span>(<span class="token-string">".output-card"</span>)).<span class="token-fn">to_have_count</span>(<span class="token-num">10</span>)
-
-    cards    = page.<span class="token-fn">locator</span>(<span class="token-string">".output-card"</span>)
-    count    = cards.<span class="token-fn">count</span>()
-    keywords = [<span class="token-string">"testing"</span>, <span class="token-string">"bugs"</span>, <span class="token-string">"quality"</span>, <span class="token-string">"automation"</span>]
-
-    passing = <span class="token-num">0</span>
-    <span class="token-keyword">for</span> i <span class="token-keyword">in</span> <span class="token-fn">range</span>(count):
-        text = (cards.<span class="token-fn">nth</span>(i).<span class="token-fn">text_content</span>() <span class="token-keyword">or</span> <span class="token-string">""</span>).<span class="token-fn">lower</span>()
-        <span class="token-keyword">if</span> <span class="token-fn">any</span>(kw <span class="token-keyword">in</span> text <span class="token-keyword">for</span> kw <span class="token-keyword">in</span> keywords):
-            passing += <span class="token-num">1</span>
-
-    <span class="token-comment"># Statistical assertion — expect ≥ 80 % pass rate</span>
-    <span class="token-keyword">assert</span> passing / count >= <span class="token-num">0.8</span></code></pre>
-      </div>
-
-      <!-- JavaScript -->
-      <div id="ten-js" class="code-panel border border-gray-200">
-        <pre><code><span class="token-keyword">const</span> { test, expect } = <span class="token-fn">require</span>(<span class="token-string">'@playwright/test'</span>);
-
-<span class="token-fn">test</span>(<span class="token-string">'at least 80 % of 10 responses contain relevant keywords'</span>, <span class="token-keyword">async</span> ({ page }) => {
-  <span class="token-keyword">await</span> page.<span class="token-fn">goto</span>(<span class="token-string">'https://buttered-spuds.github.io/ai-non-determinism-demo/'</span>);
-  <span class="token-keyword">await</span> page.<span class="token-fn">getByRole</span>(<span class="token-string">'button'</span>, { name: <span class="token-string">'Run 10 Times'</span> }).<span class="token-fn">click</span>();
-
-  <span class="token-comment">// Wait until all 10 cards are rendered</span>
-  <span class="token-keyword">await</span> <span class="token-fn">expect</span>(page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>)).<span class="token-fn">toHaveCount</span>(<span class="token-num">10</span>);
-
-  <span class="token-keyword">const</span> cards    = page.<span class="token-fn">locator</span>(<span class="token-string">'.output-card'</span>);
-  <span class="token-keyword">const</span> count    = <span class="token-keyword">await</span> cards.<span class="token-fn">count</span>();
-  <span class="token-keyword">const</span> keywords = [<span class="token-string">'testing'</span>, <span class="token-string">'bugs'</span>, <span class="token-string">'quality'</span>, <span class="token-string">'automation'</span>];
-
-  <span class="token-keyword">let</span> passing = <span class="token-num">0</span>;
-  <span class="token-keyword">for</span> (<span class="token-keyword">let</span> i = <span class="token-num">0</span>; i &lt; count; i++) {
-    <span class="token-keyword">const</span> text = (<span class="token-keyword">await</span> cards.<span class="token-fn">nth</span>(i).<span class="token-fn">textContent</span>() ?? <span class="token-string">''</span>).<span class="token-fn">toLowerCase</span>();
-    <span class="token-keyword">if</span> (keywords.<span class="token-fn">some</span>(kw => text.<span class="token-fn">includes</span>(kw))) passing++;
-  }
-
-  <span class="token-comment">// Statistical assertion — expect ≥ 80 % pass rate</span>
-  <span class="token-fn">expect</span>(passing / count).<span class="token-fn">toBeGreaterThanOrEqual</span>(<span class="token-num">0.8</span>);
-});</code></pre>
-      </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════════════════════════════
-         TIPS CALLOUT
+         TIPS
     ══════════════════════════════════════════════════════════════════ -->
     <section>
       <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-8 space-y-4">
@@ -523,11 +271,11 @@ npx playwright install</code></pre>
         <ul class="space-y-3 text-sm text-indigo-800 leading-relaxed">
           <li class="flex gap-3">
             <span class="text-indigo-400 mt-0.5">▸</span>
-            <span><strong>Never use exact-text assertions.</strong> AI outputs vary by design — use <code class="bg-indigo-100 px-1 rounded">toContainText</code> with a keyword, or extract and process the text in your test code.</span>
+            <span><strong>Never use exact-text assertions.</strong> AI outputs vary by design — use fuzzy or semantic comparison to check that the response is <em>close enough</em>, not identical.</span>
           </li>
           <li class="flex gap-3">
             <span class="text-indigo-400 mt-0.5">▸</span>
-            <span><strong>Assert on structure, not content.</strong> Check that a response card appeared, that it is non-empty, and that it doesn't contain error states.</span>
+            <span><strong>Assert on structure, not content.</strong> Check that a response card appeared, that it is non-empty, and that it does not contain error states.</span>
           </li>
           <li class="flex gap-3">
             <span class="text-indigo-400 mt-0.5">▸</span>
@@ -540,16 +288,6 @@ npx playwright install</code></pre>
         </ul>
       </div>
     </section>
-
-    <!-- Back link (bottom) -->
-    <div class="text-center pb-4">
-      <a
-        href="index.html"
-        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow transition-colors"
-      >
-        ← Back to the demo
-      </a>
-    </div>
 
   </main>
 
@@ -567,36 +305,30 @@ npx playwright install</code></pre>
           target="_blank"
           rel="noopener noreferrer"
           >GitHub Pages</a
-        >.
+        >. Created by Barry Madine — reach out for more help.
       </p>
     </div>
   </footer>
 
   <script>
-    // Tab switching — scoped by data-lang group so multiple tab sets on the page work independently
-    document.querySelectorAll('.lang-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        const lang    = tab.dataset.lang;
-        const targetId = tab.dataset.tab;
-
-        // Deactivate all tabs and panels in this language group
-        document.querySelectorAll(`.lang-tab[data-lang="${lang}"]`).forEach(t => {
+    // Language tab switching for the automation code examples
+    document.querySelectorAll('.automate-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        // Deactivate all tabs
+        document.querySelectorAll('.automate-tab').forEach(function(t) {
           t.classList.remove('active');
           t.setAttribute('aria-selected', 'false');
         });
-
-        // Hide all panels in this group (each tab's data-tab prefix matches the panel id prefix)
-        const groupTabs = document.querySelectorAll(`.lang-tab[data-lang="${lang}"]`);
-        groupTabs.forEach(t => {
-          const panel = document.getElementById(t.dataset.tab);
-          if (panel) panel.classList.remove('active');
+        // Hide all panels
+        document.querySelectorAll('.automate-panel').forEach(function(p) {
+          p.classList.remove('active-panel');
         });
-
-        // Activate the clicked tab and show the corresponding panel
+        // Activate clicked tab and show its panel
         tab.classList.add('active');
         tab.setAttribute('aria-selected', 'true');
-        const panel = document.getElementById(targetId);
-        if (panel) panel.classList.add('active');
+        var target = tab.dataset.automateTarget;
+        var panel = document.getElementById(target);
+        if (panel) panel.classList.add('active-panel');
       });
     });
   </script>
