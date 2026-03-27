@@ -39,7 +39,7 @@
 
   /** Build an output card element */
   function buildCard(item, index, total) {
-    const card = document.createElement("div");
+    const card = document.createElement("article");
     card.className = "output-card";
     card.style.animationDelay = `${index * 60}ms`;
 
@@ -54,6 +54,7 @@
 
     const blockquote = document.createElement("blockquote");
     blockquote.className = "card-text";
+    blockquote.setAttribute("aria-label", "AI response");
     blockquote.textContent = `"${item.text}"`;
 
     card.appendChild(header);
