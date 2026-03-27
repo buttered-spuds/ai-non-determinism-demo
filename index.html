@@ -58,6 +58,11 @@
       outline: none;
       cursor: pointer;
     }
+    input[type=range]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: linear-gradient(to right, #6366f1, #f97316);
+    }
     input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
@@ -69,6 +74,7 @@
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
       cursor: pointer;
       transition: border-color 0.15s, box-shadow 0.15s;
+      margin-top: -7px;
     }
     input[type=range]::-webkit-slider-thumb:hover {
       border-color: #f97316;
@@ -78,6 +84,11 @@
       height: 6px;
       border-radius: 9999px;
       background: linear-gradient(to right, #6366f1, #f97316);
+    }
+    input[type=range]::-moz-range-progress {
+      height: 6px;
+      border-radius: 9999px;
+      background: #6366f1;
     }
     input[type=range]::-moz-range-thumb {
       width: 20px;
@@ -469,6 +480,7 @@ def test_summarise_ai():
          SECTION 5 — HOW TO AUTOMATE THIS?
     ══════════════════════════════════════════════════════════════════ -->
     <section aria-labelledby="automate-heading">
+      <h2 id="automate-heading" class="sr-only">How to automate this?</h2>
       <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <button
           id="automate-toggle"
@@ -477,7 +489,7 @@ def test_summarise_ai():
           aria-controls="automate-panel"
         >
           <div>
-            <h2 id="automate-heading" class="text-xl font-bold text-gray-800">How to automate this?</h2>
+            <span class="text-xl font-bold text-gray-800">How to automate this?</span>
             <p class="text-sm text-gray-500 mt-0.5">Playwright examples for testing non-deterministic AI UIs</p>
           </div>
           <span class="automate-chevron chevron text-gray-400 text-xl ml-4 flex-shrink-0">▸</span>
@@ -586,7 +598,6 @@ public class AutomateAiDemoTests : PageTest
             <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">pip install playwright rapidfuzz &amp;&amp; playwright install</code></p>
             <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># test_automate_ai_demo.py</span>
 import re
-import pytest
 from playwright.sync_api import Page, expect
 from rapidfuzz import fuzz
 
