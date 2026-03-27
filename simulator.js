@@ -41,6 +41,7 @@
   function buildCard(item, index, total) {
     const card = document.createElement("div");
     card.className = "output-card";
+    card.setAttribute("role", "article");
     card.style.animationDelay = `${index * 60}ms`;
 
     const header = document.createElement("div");
@@ -54,6 +55,7 @@
 
     const blockquote = document.createElement("blockquote");
     blockquote.className = "card-text";
+    blockquote.setAttribute("aria-label", "AI response");
     blockquote.textContent = `"${item.text}"`;
 
     card.appendChild(header);
