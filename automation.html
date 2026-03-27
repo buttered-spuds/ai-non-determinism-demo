@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How to Automate This — AI Output Simulator</title>
+
+  <!-- Tailwind CSS (pinned browser build) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.0.0"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --font-family-sans: "Inter", ui-sans-serif, system-ui;
+      --font-family-mono: "Fira Code", ui-monospace, monospace;
+    }
+  </style>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ── Custom styles that complement Tailwind ─────────────────────────── */
+
+    code { font-family: "Fira Code", monospace; }
+
+    /* Language tab bar */
+    .automate-tab {
+      padding: 6px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .automate-tab.active  { background: #4f46e5; color: #fff; }
+    .automate-tab:not(.active) { background: transparent; color: #6b7280; }
+    .automate-tab:not(.active):hover { color: #111827; }
+  </style>
+</head>
+
+<body class="bg-gray-50 text-gray-900 antialiased">
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       TOP NAVIGATION
+  ══════════════════════════════════════════════════════════════════════ -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm" aria-label="Site navigation">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="flex items-center gap-1 h-14">
+        <a
+          href="index.html"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+        >
+          🔁 Demo
+        </a>
+        <a
+          href="automation.html"
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-indigo-50 text-indigo-700"
+          aria-current="page"
+        >
+          🤖 How to Automate?
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════════════════════════════════ -->
+  <header class="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white">
+    <div class="max-w-5xl mx-auto px-6 py-16 text-center">
+      <p class="text-sm font-semibold uppercase tracking-widest text-indigo-200 mb-4">
+        Automation Guide &nbsp;·&nbsp; AI Testing
+      </p>
+      <h1 class="text-4xl sm:text-5xl font-extrabold leading-tight mb-5">
+        How to Automate This?
+      </h1>
+      <p class="text-lg sm:text-xl text-indigo-100 max-w-2xl mx-auto">
+        Playwright examples for testing non-deterministic AI UIs across TypeScript, .NET, Python, and JavaScript.
+      </p>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-6 py-14 space-y-10">
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         INTRO
+    ══════════════════════════════════════════════════════════════════ -->
+    <section>
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-4 text-sm text-gray-600 leading-relaxed">
+        <p>
+          Start by navigating to the deployed URL as the first step in your test — for example, using a
+          <code class="bg-gray-100 px-1 rounded">goto</code> (or <code class="bg-gray-100 px-1 rounded">GotoAsync</code>) step in Playwright.
+        </p>
+        <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-indigo-800">
+          <strong>The core challenge:</strong> AI responses are non-deterministic — the same prompt will produce
+          different (but often equally valid) answers on every run. Exact string matching will cause your tests
+          to fail even when the AI is working correctly. Instead, use a
+          <strong>semantic or fuzzy comparison</strong> library to assert that the response is
+          <em>close enough</em> to an expected value.
+        </div>
+        <p>
+          The examples below show how to navigate to this demo, click the button to get a response, and
+          assert that the output is meaningfully similar to a reference answer — rather than requiring an
+          exact match.
+        </p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         CODE EXAMPLES
+    ══════════════════════════════════════════════════════════════════ -->
+    <section aria-labelledby="examples-heading">
+      <h2 id="examples-heading" class="text-2xl font-bold mb-6">Playwright examples</h2>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+
+        <!-- Tab bar -->
+        <div class="px-6 pt-5 pb-3 border-b border-gray-100">
+          <div class="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 gap-1" role="tablist" aria-label="Language examples">
+            <button class="automate-tab active" type="button" tabindex="0"
+              id="automate-tab-ts" data-automate-target="automate-ts" role="tab" aria-selected="true" aria-controls="automate-ts">TypeScript</button>
+            <button class="automate-tab" type="button" tabindex="-1"
+              id="automate-tab-dotnet" data-automate-target="automate-dotnet" role="tab" aria-selected="false" aria-controls="automate-dotnet">.NET (C#)</button>
+            <button class="automate-tab" type="button" tabindex="-1"
+              id="automate-tab-py" data-automate-target="automate-py" role="tab" aria-selected="false" aria-controls="automate-py">Python</button>
+            <button class="automate-tab" type="button" tabindex="-1"
+              id="automate-tab-js" data-automate-target="automate-js" role="tab" aria-selected="false" aria-controls="automate-js">JavaScript</button>
+          </div>
+        </div>
+
+        <div class="px-6 pb-6 pt-4 space-y-4 text-sm text-gray-600">
+
+          <!-- TypeScript panel -->
+          <div id="automate-ts" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-ts" tabindex="0">
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity @types/string-similarity</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.ts</span>
+import { test, expect } from '@playwright/test';
+import stringSimilarity from 'string-similarity';
+
+test('AI response is semantically similar to expected output', async ({ page }) => {
+  <span class="text-gray-400">// 1. Navigate to the demo</span>
+  await page.goto('https://buttered-spuds.github.io/ai-non-determinism-demo/');
+
+  <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+  await page.locator('#btn-run-once').click();
+
+  <span class="text-gray-400">// 3. Wait for and capture the response</span>
+  const responseCard = page.locator('.output-card blockquote').first();
+  await expect(responseCard).toBeVisible();
+  const responseText = (await responseCard.textContent() ?? '').replace(/^"|"$/g, '');
+
+  <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
+  const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
+  const similarity = stringSimilarity.compareTwoStrings(responseText, expected);
+
+  <span class="text-gray-400">// compareTwoStrings returns 0–1; assert the response is meaningfully similar</span>
+  expect(similarity, `Response was not similar enough. Got: "${responseText}"`).toBeGreaterThan(0.5);
+});</code></pre>
+          </div>
+
+          <!-- .NET panel -->
+          <div id="automate-dotnet" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-dotnet" tabindex="0" hidden>
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">dotnet add package Microsoft.Playwright.NUnit</code> then <code class="bg-gray-100 px-1 rounded">dotnet add package FuzzySharp</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// AutomateAiDemoTests.cs</span>
+using FuzzySharp;
+using Microsoft.Playwright.NUnit;
+using NUnit.Framework;
+
+[Parallelizable(ParallelScope.Self)]
+[TestFixture]
+public class AutomateAiDemoTests : PageTest
+{
+    [Test]
+    public async Task AiResponse_IsSemanticallyClose_ToExpected()
+    {
+        <span class="text-gray-400">// 1. Navigate to the demo</span>
+        await Page.GotoAsync("https://buttered-spuds.github.io/ai-non-determinism-demo/");
+
+        <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+        await Page.Locator("#btn-run-once").ClickAsync();
+
+        <span class="text-gray-400">// 3. Wait for and capture the response</span>
+        var responseCard = Page.Locator(".output-card blockquote").First;
+        await Expect(responseCard).ToBeVisibleAsync();
+        var responseText = (await responseCard.TextContentAsync() ?? "").Trim('"');
+
+        <span class="text-gray-400">// 4. Use FuzzySharp for fuzzy comparison instead of an exact match</span>
+        const string expected = "Automated testing saves time by catching bugs early and reducing manual effort.";
+        int score = Fuzz.TokenSortRatio(responseText, expected);
+
+        <span class="text-gray-400">// Fuzz.TokenSortRatio returns 0–100; assert the response is meaningfully similar</span>
+        Assert.That(score, Is.GreaterThan(50),
+            $"Similarity score {score} is below threshold. Got: \"{responseText}\"");
+    }
+}</code></pre>
+          </div>
+
+          <!-- Python panel -->
+          <div id="automate-py" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-py" tabindex="0" hidden>
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">pip install playwright rapidfuzz</code> then <code class="bg-gray-100 px-1 rounded">playwright install</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400"># test_automate_ai_demo.py</span>
+import re
+from playwright.sync_api import Page, expect
+from rapidfuzz import fuzz
+
+def test_ai_response_is_semantically_close(page: Page):
+    <span class="text-gray-400"># 1. Navigate to the demo</span>
+    page.goto("https://buttered-spuds.github.io/ai-non-determinism-demo/")
+
+    <span class="text-gray-400"># 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+    page.locator("#btn-run-once").click()
+
+    <span class="text-gray-400"># 3. Wait for and capture the response</span>
+    response_card = page.locator(".output-card blockquote").first
+    expect(response_card).to_be_visible()
+    response_text = re.sub(r'^"|"$', "", response_card.text_content() or "")
+
+    <span class="text-gray-400"># 4. Use rapidfuzz for fuzzy comparison instead of an exact match</span>
+    expected = "Automated testing saves time by catching bugs early and reducing manual effort."
+    score = fuzz.token_sort_ratio(response_text, expected)
+
+    <span class="text-gray-400"># token_sort_ratio returns 0–100; assert the response is meaningfully similar</span>
+    assert score > 50, f"Similarity score {score} is below threshold. Got: {response_text!r}"</code></pre>
+          </div>
+
+          <!-- JavaScript panel -->
+          <div id="automate-js" class="automate-panel" role="tabpanel" aria-labelledby="automate-tab-js" tabindex="0" hidden>
+            <p class="mb-2 text-xs text-gray-400">Install: <code class="bg-gray-100 px-1 rounded">npm install string-similarity</code></p>
+            <pre class="bg-gray-900 text-green-400 rounded-xl p-5 text-xs font-mono overflow-x-auto leading-relaxed"><code><span class="text-gray-400">// automate-ai-demo.spec.js</span>
+const { test, expect } = require('@playwright/test');
+const stringSimilarity = require('string-similarity');
+
+test('AI response is semantically similar to expected output', async ({ page }) => {
+  <span class="text-gray-400">// 1. Navigate to the demo</span>
+  await page.goto('https://buttered-spuds.github.io/ai-non-determinism-demo/');
+
+  <span class="text-gray-400">// 2. The prompt is pre-filled; click Run Prompt to submit it</span>
+  await page.locator('#btn-run-once').click();
+
+  <span class="text-gray-400">// 3. Wait for and capture the response</span>
+  const responseCard = page.locator('.output-card blockquote').first();
+  await expect(responseCard).toBeVisible();
+  const responseText = ((await responseCard.textContent()) ?? '').replace(/^"|"$/g, '');
+
+  <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
+  const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
+  const similarity = stringSimilarity.compareTwoStrings(responseText, expected);
+
+  <span class="text-gray-400">// compareTwoStrings returns 0–1; assert the response is meaningfully similar</span>
+  expect(similarity, `Response was not similar enough. Got: "${responseText}"`).toBeGreaterThan(0.5);
+});</code></pre>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         TIPS
+    ══════════════════════════════════════════════════════════════════ -->
+    <section>
+      <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-8 space-y-4">
+        <h2 class="text-xl font-bold text-indigo-900">Tips for testing AI-powered UIs</h2>
+        <ul class="space-y-3 text-sm text-indigo-800 leading-relaxed">
+          <li class="flex gap-3">
+            <span class="text-indigo-400 mt-0.5">▸</span>
+            <span><strong>Never use exact-text assertions.</strong> AI outputs vary by design — use fuzzy or semantic comparison to check that the response is <em>close enough</em>, not identical.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-indigo-400 mt-0.5">▸</span>
+            <span><strong>Assert on structure, not content.</strong> Check that a response card appeared, that it is non-empty, and that it does not contain error states.</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-indigo-400 mt-0.5">▸</span>
+            <span><strong>Use statistical thresholds.</strong> Run the prompt multiple times and assert that the pass rate meets your quality bar (e.g. ≥ 80 %).</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-indigo-400 mt-0.5">▸</span>
+            <span><strong>Separate deterministic from non-deterministic checks.</strong> UI structure (buttons, layout, labels) can be asserted exactly; AI content cannot.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════════════════════════════ -->
+  <footer class="border-t border-gray-100 bg-white mt-16">
+    <div class="max-w-5xl mx-auto px-6 py-8 text-center text-sm text-gray-400">
+      <p>
+        All responses are pre-written simulations — no API calls, no backend, no secrets.
+        Hosted on
+        <a
+          href="https://pages.github.com"
+          class="underline hover:text-indigo-500 transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
+          >GitHub Pages</a
+        >. Created by Barry Madine — reach out for more help.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var tabs   = Array.prototype.slice.call(document.querySelectorAll('.automate-tab'));
+      var panels = Array.prototype.slice.call(document.querySelectorAll('.automate-panel'));
+
+      /**
+       * Activates the given tab: marks it selected, gives it tabindex 0,
+       * sets all other tabs to tabindex -1, and reveals its associated panel.
+       * @param {HTMLElement} tab - The tab button element to activate.
+       */
+      function activateTab(tab) {
+        // Deactivate all tabs and hide all panels
+        tabs.forEach(function (t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+          t.tabIndex = -1;
+        });
+        panels.forEach(function (p) {
+          p.hidden = true;
+        });
+
+        // Activate the chosen tab
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.tabIndex = 0;
+
+        // Show the associated panel; focus stays on the activated tab
+        var panel = document.getElementById(tab.dataset.automateTarget);
+        if (panel) {
+          panel.hidden = false;
+        }
+      }
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          activateTab(tab);
+        });
+
+        tab.addEventListener('keydown', function (event) {
+          var key = event.key;
+          var currentIndex = tabs.indexOf(tab);
+          var nextIndex = currentIndex;
+
+          if (key === 'ArrowRight') {
+            nextIndex = (currentIndex + 1) % tabs.length;
+          } else if (key === 'ArrowLeft') {
+            nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+          } else if (key === 'Home') {
+            nextIndex = 0;
+          } else if (key === 'End') {
+            nextIndex = tabs.length - 1;
+          } else {
+            return; // let other keys fall through
+          }
+
+          event.preventDefault();
+          tabs[nextIndex].focus();
+          activateTab(tabs[nextIndex]);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
