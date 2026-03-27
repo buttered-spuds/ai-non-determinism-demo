@@ -39,9 +39,8 @@
 
   /** Build an output card element */
   function buildCard(item, index, total) {
-    const card = document.createElement("div");
+    const card = document.createElement("article");
     card.className = "output-card";
-    card.setAttribute("role", "article");
     card.style.animationDelay = `${index * 60}ms`;
 
     const header = document.createElement("div");

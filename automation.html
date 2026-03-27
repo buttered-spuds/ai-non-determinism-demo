@@ -141,7 +141,7 @@ test('AI response is semantically similar to expected output', async ({ page }) 
   <span class="text-gray-400">// 3. Wait for and capture the response</span>
   const responseCard = page.getByRole('article').first();
   await expect(responseCard).toBeVisible();
-  const responseText = (await responseCard.getByLabel('AI response').textContent() ?? '').replace(/^"|"$/g, '');
+  const responseText = (await responseCard.getByRole('blockquote', { name: 'AI response' }).textContent() ?? '').replace(/^"|"$/g, '');
 
   <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
   const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
@@ -176,7 +176,7 @@ public class AutomateAiDemoTests : PageTest
         <span class="text-gray-400">// 3. Wait for and capture the response</span>
         var responseCard = Page.GetByRole(AriaRole.Article).First;
         await Expect(responseCard).ToBeVisibleAsync();
-        var responseText = (await responseCard.GetByLabel("AI response").TextContentAsync() ?? "").Trim('"');
+        var responseText = (await responseCard.GetByRole(AriaRole.Blockquote, new() { Name = "AI response" }).TextContentAsync() ?? "").Trim('"');
 
         <span class="text-gray-400">// 4. Use FuzzySharp for fuzzy comparison instead of an exact match</span>
         const string expected = "Automated testing saves time by catching bugs early and reducing manual effort.";
@@ -207,7 +207,7 @@ def test_ai_response_is_semantically_close(page: Page):
     <span class="text-gray-400"># 3. Wait for and capture the response</span>
     response_card = page.get_by_role("article").first
     expect(response_card).to_be_visible()
-    response_text = re.sub(r'^"|"$', "", response_card.get_by_label("AI response").text_content() or "")
+    response_text = re.sub(r'^"|"$', "", response_card.get_by_role("blockquote", name="AI response", exact=True).text_content() or "")
 
     <span class="text-gray-400"># 4. Use rapidfuzz for fuzzy comparison instead of an exact match</span>
     expected = "Automated testing saves time by catching bugs early and reducing manual effort."
@@ -234,7 +234,7 @@ test('AI response is semantically similar to expected output', async ({ page }) 
   <span class="text-gray-400">// 3. Wait for and capture the response</span>
   const responseCard = page.getByRole('article').first();
   await expect(responseCard).toBeVisible();
-  const responseText = ((await responseCard.getByLabel('AI response').textContent()) ?? '').replace(/^"|"$/g, '');
+  const responseText = ((await responseCard.getByRole('blockquote', { name: 'AI response' }).textContent()) ?? '').replace(/^"|"$/g, '');
 
   <span class="text-gray-400">// 4. Use fuzzy/semantic comparison instead of an exact match</span>
   const expected = 'Automated testing saves time by catching bugs early and reducing manual effort.';
