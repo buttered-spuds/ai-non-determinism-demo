@@ -1,0 +1,8 @@
+# Format: <screenshot-filename-without-extension>=<description>
+# These descriptions are prepended to the reviewer prompt for each screenshot.
+01-demo-loaded=Demo page on initial load before any interaction
+02-single-output=Demo page after clicking Run Prompt once, one AI response card visible
+03-ten-outputs=Demo page after clicking Run 10 Times, ten response cards in the grid
+04-hallucination=Demo page hallucination section after clicking Ask the AI, one response card visible
+05-cheatsheet-expanded=Demo page with the first cheat sheet accordion row expanded
+06-automation-python-tab=Automation page with the Python language tab selected and panel visible
