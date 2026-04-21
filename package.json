@@ -1,0 +1,10 @@
+{
+  "name": "ai-non-determinism-demo-tests",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}

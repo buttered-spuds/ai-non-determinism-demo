@@ -41,6 +41,7 @@
   function buildCard(item, index, total) {
     const card = document.createElement("article");
     card.className = "output-card";
+    card.setAttribute("aria-label", "AI response output");
     card.style.animationDelay = `${index * 60}ms`;
 
     const header = document.createElement("div");
@@ -72,8 +73,9 @@
     };
     const l = labelMap[item.label] || labelMap.correct;
 
-    const card = document.createElement("div");
+    const card = document.createElement("article");
     card.className = `h-card ${l.cls}`;
+    card.setAttribute("aria-label", "Hallucination response");
     card.style.animationDelay = `${index * 80}ms`;
 
     const header = document.createElement("div");
