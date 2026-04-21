@@ -12,18 +12,22 @@ export class DemoPage {
     return this.page.getByRole('button', { name: 'Run 10 Times' });
   }
 
-  /** First ✕ Clear button — in the main demo section */
+  /** ✕ Clear button scoped to the main demo section */
   get clearButton(): Locator {
-    return this.page.getByRole('button', { name: '✕ Clear' }).nth(0);
+    return this.page
+      .getByRole('region', { name: /The Nondeterminism Simulator/ })
+      .getByRole('button', { name: '✕ Clear' });
   }
 
   get askTheAiButton(): Locator {
     return this.page.getByRole('button', { name: 'Ask the AI' });
   }
 
-  /** Second ✕ Clear button — in the hallucination section */
+  /** ✕ Clear button scoped to the hallucination section */
   get clearHallucinationButton(): Locator {
-    return this.page.getByRole('button', { name: '✕ Clear' }).nth(1);
+    return this.page
+      .getByRole('region', { name: /Hallucination Demo/ })
+      .getByRole('button', { name: '✕ Clear' });
   }
 
   get traditionalTestTab(): Locator {
@@ -50,13 +54,8 @@ export class DemoPage {
     return this.page.getByRole('link', { name: 'How to Automate' });
   }
 
-  /**
-   * Returns the expanded content panel for the given cheat sheet row (1-indexed).
-   * These panels have no ARIA role, so an ID-based locator is used here as a
-   * deliberate exception to the getByRole convention.
-   */
   cheatSheetPanel(rowNumber: number): Locator {
-    return this.page.locator(`#cheat-panel-${rowNumber}`);
+    return this.page.getByRole('region', { name: new RegExp(`${rowNumber} ·`) });
   }
 
   async goto(): Promise<void> {
