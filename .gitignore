@@ -2,3 +2,4 @@ node_modules/
 test-results/
 tests/screenshots/*
 !tests/screenshots/.gitkeep
+artifacts/

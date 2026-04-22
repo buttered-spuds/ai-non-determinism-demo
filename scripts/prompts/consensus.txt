@@ -1,0 +1,7 @@
+Here are two independent UI reviews (Agent A and Agent B) of the same screenshot.
+Produce:
+(1) AGREED — issues both reviewers raised
+(2) DISPUTED — issues raised by only one reviewer, with a one-line judgement on which side is more likely correct
+(3) FINAL — ranked list of defects with severity S1 (critical) to S4 (trivial) and a suggested fix direction
+
+Only include issues at or above MIN_SEVERITY in the FINAL section.

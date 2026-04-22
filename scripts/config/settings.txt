@@ -1,0 +1,4 @@
+# Minimum severity level to include in the final consensus output.
+# S1 = critical, S2 = major, S3 = minor, S4 = trivial
+# Set to S4 to see all issues, S1 to see only critical issues.
+MIN_SEVERITY=S3

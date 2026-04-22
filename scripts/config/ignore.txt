@@ -1,0 +1,4 @@
+# Issues marked as accepted/wontfix by the client.
+# Add one issue description per line — agents will be told not to raise these.
+# Example:
+Header breadcrumb dot separator contrast
