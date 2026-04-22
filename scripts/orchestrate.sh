@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# orchestrate.sh — Multi-agent UI review orchestrator
+# orchestrate.sh -- Multi-agent UI review orchestrator
 # Runs Playwright smoke tests, passes each screenshot to two Copilot CLI agents
 # (Claude Sonnet 4.6 and GPT-5.4) for independent UI reviews, runs a consensus
 # pass, then writes a SUMMARY.md.
@@ -7,33 +7,35 @@
 # Prerequisites:
 #   - copilot CLI installed and authenticated (github.com/github/copilot-cli)
 #   - npx / Node.js available
+#
+# No API keys required -- all model calls are routed through the copilot CLI.
 
 set -euo pipefail
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Paths
-# ─────────────────────────────────────────────────────────────────────────────
-REPO_ROOT="$(cd ""+"$0")/.." && pwd)"
+# -----------------------------------------------------------------------------
+REPO_ROOT="$(cd ""$(dirname "$0")/.." && pwd)"
 SCRIPTS_DIR="$REPO_ROOT/scripts"
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Dependency check
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 if ! command -v copilot &>/dev/null; then
   echo "ERROR: 'copilot' CLI not found. Install it and authenticate first." >&2
   exit 1
 fi
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Setup — read and validate MIN_SEVERITY
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Setup -- read and validate MIN_SEVERITY
+# -----------------------------------------------------------------------------
 MIN_SEVERITY=$(grep -E '^MIN_SEVERITY=' "$SCRIPTS_DIR/config/settings.txt" 2>/dev/null \
   | cut -d'=' -f2 \
   | tr -d '[:space:]') || true
 
 # Validate against allowed values; warn and default to S3 if invalid
 case "$MIN_SEVERITY" in
-  S1|S2|S3|S4) ;;  
+  S1|S2|S3|S4) ;; 
   *)
     echo "WARNING: Invalid MIN_SEVERITY value '${MIN_SEVERITY}'. Defaulting to S3." >&2
     MIN_SEVERITY="S3"
@@ -47,9 +49,9 @@ mkdir -p "$ARTIFACTS_DIR"
 echo "==> Artifacts will be written to: $ARTIFACTS_DIR"
 echo "==> MIN_SEVERITY: $MIN_SEVERITY"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Step 1 — Run Playwright
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Step 1 -- Run Playwright
+# -----------------------------------------------------------------------------
 echo ""
 echo "==> Step 1: Running Playwright tests..."
 cd "$REPO_ROOT"
@@ -58,9 +60,9 @@ if ! npx playwright test; then
   exit 1
 fi
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Step 2 — Build ignore list
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Step 2 -- Build ignore list
+# -----------------------------------------------------------------------------
 IGNORE_FILE="$SCRIPTS_DIR/config/ignore.txt"
 IGNORE_ENTRIES=""
 if [[ -f "$IGNORE_FILE" ]]; then
@@ -76,9 +78,9 @@ if [[ -n "$IGNORE_ENTRIES" ]]; then
   IGNORE_BLOCK=$'The following issues have been marked as accepted/wontfix. Do NOT raise or mention these:\n'"$IGNORE_ENTRIES"
 fi
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Step 3 — Review each screenshot
-# ────────────────────��────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Step 3 -- Review each screenshot
+# -----------------------------------------------------------------------------
 REVIEWER_TEMPLATE=$(cat "$SCRIPTS_DIR/prompts/reviewer.txt")
 CONSENSUS_TEMPLATE=$(cat "$SCRIPTS_DIR/prompts/consensus.txt")
 CONTEXT_FILE="$SCRIPTS_DIR/config/context.txt"
@@ -88,7 +90,7 @@ SUMMARY_SECTIONS=()
 for screenshot in "$REPO_ROOT/tests/screenshots/"*.png; do
   [[ -f "$screenshot" ]] || continue
 
-  # Fail fast if the path contains spaces — the @ token would be truncated
+  # Fail fast if the path contains spaces -- the @ token would be truncated
   if [[ "$screenshot" == *" "* ]]; then
     echo "ERROR: Screenshot path contains spaces: $screenshot" >&2
     echo "Move the repository to a space-free path and retry." >&2
@@ -117,37 +119,37 @@ echo "==> Processing: $basename"
 
   # Build reviewer prompt using printf so variables expand with real newlines.
   # @<path> at the start attaches the image via the Copilot CLI.
-printf -v REVIEWER_PROMPT '@%s This screenshot shows: %s\n\n%s' \
+  printf -v REVIEWER_PROMPT '@%s This screenshot shows: %s\n\n%s' \
     "$screenshot" "$description" "$REVIEWER_TEMPLATE"
   if [[ -n "$IGNORE_BLOCK" ]]; then
     printf -v REVIEWER_PROMPT '%s\n\n%s' "$REVIEWER_PROMPT" "$IGNORE_BLOCK"
   fi
 
-  # ── Agent A: Claude Sonnet 4.6 ────────────────────────────────────────────
+  # -- Agent A: Claude Sonnet 4.6 -----------------------------------------------
 echo "    -> Calling Agent A (Claude Sonnet 4.6)..."
   REVIEW_A=""
   if REVIEW_A=$(copilot --model claude-sonnet-4.6 -s -p "$REVIEWER_PROMPT" 2>&1); then
     echo "$REVIEW_A" > "$ARTIFACTS_DIR/${basename}-agent-a.md"
   else
-    echo "    WARNING: Agent A failed for $basename — skipping." >&2
+    echo "    WARNING: Agent A failed for $basename -- skipping." >&2
     echo "FAILED" > "$ARTIFACTS_DIR/${basename}-agent-a.md"
     REVIEW_A="FAILED"
   fi
 
-  # ── Agent B: GPT-5.4 ──────────────────────────────────────────────────────
+  # -- Agent B: GPT-5.4 ---------------------------------------------------------
 echo "    -> Calling Agent B (GPT-5.4)..."
   REVIEW_B=""
   if REVIEW_B=$(copilot --model gpt-5.4 -s -p "$REVIEWER_PROMPT" 2>&1); then
     echo "$REVIEW_B" > "$ARTIFACTS_DIR/${basename}-agent-b.md"
   else
-    echo "    WARNING: Agent B failed for $basename — skipping." >&2
+    echo "    WARNING: Agent B failed for $basename -- skipping." >&2
     echo "FAILED" > "$ARTIFACTS_DIR/${basename}-agent-b.md"
     REVIEW_B="FAILED"
   fi
 
-  # ── Consensus pass ────────────────────────────────────────────────────────
+  # -- Consensus pass -----------------------------------------------------------
 echo "    -> Running consensus pass..."
-printf -v CONSENSUS_PROMPT '%s\n\nMIN_SEVERITY: %s\n\n--- Agent A Review ---\n%s\n\n--- Agent B Review ---\n%s' \
+  printf -v CONSENSUS_PROMPT '%s\n\nMIN_SEVERITY: %s\n\n--- Agent A Review ---\n%s\n\n--- Agent B Review ---\n%s' \
     "$CONSENSUS_TEMPLATE" "$MIN_SEVERITY" "$REVIEW_A" "$REVIEW_B"
 
   CONSENSUS=""
@@ -162,9 +164,9 @@ printf -v CONSENSUS_PROMPT '%s\n\nMIN_SEVERITY: %s\n\n--- Agent A Review ---\n%s
   SUMMARY_SECTIONS+=("$basename")
 done
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Step 4 — Generate SUMMARY.md
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Step 4 -- Generate SUMMARY.md
+# -----------------------------------------------------------------------------
 echo ""
 echo "==> Step 4: Generating SUMMARY.md..."
 
@@ -173,7 +175,7 @@ IGNORE_COUNT=$(grep -cvE '^[[:space:]]*(#|$)' "$IGNORE_FILE" 2>/dev/null || echo
 
 SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
 {
-  echo "# UI Review Run — ${TIMESTAMP}"
+  echo "# UI Review Run -- ${TIMESTAMP}"
   echo ""
   echo "## Screenshots Reviewed"
   echo ""
@@ -191,7 +193,7 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
         fi
       done < "$CONTEXT_FILE"
     fi
-    echo "| \\`${name}\\` | ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) |"
+    echo "| \\`${name}\` | ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) |"
   done
   echo ""
   echo "## Configuration"
@@ -206,5 +208,5 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
 } > "$SUMMARY_FILE"
 
 echo ""
-echo "✅ Review complete. Artifacts saved to: $ARTIFACTS_DIR"
-echo "📄 Summary: $SUMMARY_FILE"
+echo "Review complete. Artifacts saved to: $ARTIFACTS_DIR"
+echo "Summary: $SUMMARY_FILE"
