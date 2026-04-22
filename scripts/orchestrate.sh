@@ -13,7 +13,7 @@ set -euo pipefail
 # ─────────────────────────────────────────────────────────────────────────────
 # Paths
 # ─────────────────────────────────────────────────────────────────────────────
-REPO_ROOT="$(cd ""$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd ""+"$0")/.." && pwd)"
 SCRIPTS_DIR="$REPO_ROOT/scripts"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ MIN_SEVERITY=$(grep -E '^MIN_SEVERITY=' "$SCRIPTS_DIR/config/settings.txt" 2>/de
 
 # Validate against allowed values; warn and default to S3 if invalid
 case "$MIN_SEVERITY" in
-  S1|S2|S3|S4) ;;
+  S1|S2|S3|S4) ;;  
   *)
     echo "WARNING: Invalid MIN_SEVERITY value '${MIN_SEVERITY}'. Defaulting to S3." >&2
     MIN_SEVERITY="S3"
@@ -78,7 +78,7 @@ fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Step 3 — Review each screenshot
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────��────────────────────────────────────────────────────────
 REVIEWER_TEMPLATE=$(cat "$SCRIPTS_DIR/prompts/reviewer.txt")
 CONSENSUS_TEMPLATE=$(cat "$SCRIPTS_DIR/prompts/consensus.txt")
 CONTEXT_FILE="$SCRIPTS_DIR/config/context.txt"
@@ -115,10 +115,12 @@ echo "==> Processing: $basename"
   fi
   [[ -z "$description" ]] && description="$basename"
 
-  # Build reviewer prompt — @<path> attaches the image via the Copilot CLI
-  REVIEWER_PROMPT="@${screenshot} This screenshot shows: ${description}\n\n${REVIEWER_TEMPLATE}"
+  # Build reviewer prompt using printf so variables expand with real newlines.
+  # @<path> at the start attaches the image via the Copilot CLI.
+printf -v REVIEWER_PROMPT '@%s This screenshot shows: %s\n\n%s' \
+    "$screenshot" "$description" "$REVIEWER_TEMPLATE"
   if [[ -n "$IGNORE_BLOCK" ]]; then
-    REVIEWER_PROMPT="${REVIEWER_PROMPT}\n\n${IGNORE_BLOCK}"
+    printf -v REVIEWER_PROMPT '%s\n\n%s' "$REVIEWER_PROMPT" "$IGNORE_BLOCK"
   fi
 
   # ── Agent A: Claude Sonnet 4.6 ────────────────────────────────────────────
@@ -145,7 +147,8 @@ echo "    -> Calling Agent B (GPT-5.4)..."
 
   # ── Consensus pass ────────────────────────────────────────────────────────
 echo "    -> Running consensus pass..."
-  CONSENSUS_PROMPT="${CONSENSUS_TEMPLATE}\n\nMIN_SEVERITY: ${MIN_SEVERITY}\n\n--- Agent A Review ---\n${REVIEW_A}\n\n--- Agent B Review ---\n${REVIEW_B}"
+printf -v CONSENSUS_PROMPT '%s\n\nMIN_SEVERITY: %s\n\n--- Agent A Review ---\n%s\n\n--- Agent B Review ---\n%s' \
+    "$CONSENSUS_TEMPLATE" "$MIN_SEVERITY" "$REVIEW_A" "$REVIEW_B"
 
   CONSENSUS=""
   if CONSENSUS=$(copilot --model claude-sonnet-4.6 -s -p "$CONSENSUS_PROMPT" 2>&1); then
@@ -165,7 +168,8 @@ done
 echo ""
 echo "==> Step 4: Generating SUMMARY.md..."
 
-IGNORE_COUNT=$(grep -cvE '^\\s*#|^\\\s*$' "$IGNORE_FILE" 2>/dev/null || echo 0)
+# Count non-comment, non-blank lines in ignore.txt
+IGNORE_COUNT=$(grep -cvE '^[[:space:]]*(#|$)' "$IGNORE_FILE" 2>/dev/null || echo 0)
 
 SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
 {
@@ -175,7 +179,7 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
   echo ""
   echo "| Screenshot | Context | Agent A | Agent B | Consensus |"
   echo "|---|---|---|---|---|"
-  for name in "">${SUMMARY_SECTIONS[@]}"; do
+  for name in "${SUMMARY_SECTIONS[@]}"; do
     desc="$name"
     if [[ -f "$CONTEXT_FILE" ]]; then
       while IFS= read -r line; do
@@ -187,7 +191,7 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
         fi
       done < "$CONTEXT_FILE"
     fi
-    echo "| \\`${name}\ | ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) |"
+    echo "| \\`${name}\\` | ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) |"
   done
   echo ""
   echo "## Configuration"
@@ -197,7 +201,8 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
   echo ""
   echo "## Artifacts"
   echo ""
-  echo "All files saved to: \\`${ARTIFACTS_DIR}\"
+  echo "All files saved to: \
+`${ARTIFACTS_DIR}`"
 } > "$SUMMARY_FILE"
 
 echo ""
