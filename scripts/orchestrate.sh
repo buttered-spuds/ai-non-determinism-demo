@@ -7,14 +7,13 @@
 # Prerequisites:
 #   - copilot CLI installed and authenticated (github.com/github/copilot-cli)
 #   - npx / Node.js available
-#   - jq, curl, base64 (GNU coreutils or macOS equivalents)
 
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Paths
 # ─────────────────────────────────────────────────────────────────────────────
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+REPO_ROOT="$(cd ""+"$(dirname "$0")/.." && pwd)"
 SCRIPTS_DIR="$REPO_ROOT/scripts"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -26,12 +25,20 @@ if ! command -v copilot &>/dev/null; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Setup
+# Setup — read and validate MIN_SEVERITY
 # ─────────────────────────────────────────────────────────────────────────────
 MIN_SEVERITY=$(grep -E '^MIN_SEVERITY=' "$SCRIPTS_DIR/config/settings.txt" 2>/dev/null \
   | cut -d'=' -f2 \
   | tr -d '[:space:]') || true
-: "${MIN_SEVERITY:=S3}"
+
+# Validate against allowed values; warn and default to S3 if invalid
+case "${MIN_SEVERITY}" in
+  S1|S2|S3|S4) ;;
+  *)
+    echo "WARNING: Invalid MIN_SEVERITY value '${MIN_SEVERITY}'. Defaulting to S3." >&2
+    MIN_SEVERITY="S3"
+    ;;
+esac
 
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 ARTIFACTS_DIR="$REPO_ROOT/artifacts/run-${TIMESTAMP}"
@@ -66,146 +73,4 @@ fi
 
 IGNORE_BLOCK=""
 if [[ -n "$IGNORE_ENTRIES" ]]; then
-  IGNORE_BLOCK=$'The following issues have been marked as accepted/wontfix. Do NOT raise or mention these:\n'"$IGNORE_ENTRIES"
-fi
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Step 3 — Review each screenshot
-# ─────────────────────────────────────────────────────────────────────────────
-REVIEWER_TEMPLATE=$(cat "$SCRIPTS_DIR/prompts/reviewer.txt")
-CONSENSUS_TEMPLATE=$(cat "$SCRIPTS_DIR/prompts/consensus.txt")
-CONTEXT_FILE="$SCRIPTS_DIR/config/context.txt"
-
-SUMMARY_SECTIONS=()
-
-for screenshot in "$REPO_ROOT/tests/screenshots/"*.png; do
-  [[ -f "$screenshot" ]] || continue
-
-  basename_ext="${screenshot##*/}"
-  basename="${basename_ext%.png}"
-
-  echo ""
-echo "==> Processing: $basename"
-
-  # Look up description from context.txt
-  description=""
-  if [[ -f "$CONTEXT_FILE" ]]; then
-    while IFS= read -r line; do
-      [[ "$line" =~ ^[[:space:]]*# ]] && continue
-      key="${line%%=*}"
-      if [[ "$key" == "$basename" ]]; then
-        description="${line#*=}"
-        break
-      fi
-    done < "$CONTEXT_FILE"
-  fi
-  [[ -z "$description" ]] && description="$basename"
-
-  # Build reviewer prompt with real newlines (@ prefix attaches the image via Copilot CLI)
-  printf -v REVIEWER_PROMPT '@%s This screenshot shows: %s\n\n%s' \
-    "$screenshot" "$description" "$REVIEWER_TEMPLATE"
-  if [[ -n "$IGNORE_BLOCK" ]]; then
-    printf -v REVIEWER_PROMPT '%s\n\n%s' "$REVIEWER_PROMPT" "$IGNORE_BLOCK"
-  fi
-
-  # ── Agent A: Claude Sonnet 4.6 ──────────────────────────────────────────────
-echo "    -> Calling Agent A (Claude Sonnet 4.6)..."
-  REVIEW_A=""
-  if REVIEW_A=$(copilot --model claude-sonnet-4.6 -s -p "$REVIEWER_PROMPT" 2>&1); then
-    echo "$REVIEW_A" > "$ARTIFACTS_DIR/${basename}-agent-a.md"
-  else
-    echo "    WARNING: Agent A failed for $basename — skipping." >&2
-    echo "FAILED" > "$ARTIFACTS_DIR/${basename}-agent-a.md"
-    REVIEW_A="FAILED"
-  fi
-
-  # ── Agent B: GPT-5.4 ────────────────────────────────────────────────────────
-echo "    -> Calling Agent B (GPT-5.4)..."
-  REVIEW_B=""
-  if REVIEW_B=$(copilot --model gpt-5.4 -s -p "$REVIEWER_PROMPT" 2>&1); then
-    echo "$REVIEW_B" > "$ARTIFACTS_DIR/${basename}-agent-b.md"
-  else
-    echo "    WARNING: Agent B failed for $basename — skipping." >&2
-    echo "FAILED" > "$ARTIFACTS_DIR/${basename}-agent-b.md"
-    REVIEW_B="FAILED"
-  fi
-
-  # ── Consensus pass ────────────────────────────────────────────────────────────
-echo "    -> Running consensus pass..."
-  printf -v CONSENSUS_PROMPT '%s\n\nMIN_SEVERITY: %s\n\n--- Agent A Review ---\n%s\n\n--- Agent B Review ---\n%s' \
-    "$CONSENSUS_TEMPLATE" "$MIN_SEVERITY" "$REVIEW_A" "$REVIEW_B"
-
-  CONSENSUS=""
-  if CONSENSUS=$(copilot --model claude-sonnet-4.6 -s -p "$CONSENSUS_PROMPT" 2>&1); then
-    echo "$CONSENSUS" > "$ARTIFACTS_DIR/${basename}-consensus.md"
-  else
-    echo "    WARNING: Consensus pass failed for $basename." >&2
-    echo "FAILED" > "$ARTIFACTS_DIR/${basename}-consensus.md"
-    CONSENSUS="FAILED"
-  fi
-
-  SUMMARY_SECTIONS+=("$basename")
-done
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Step 4 — Generate SUMMARY.md
-# ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "==> Step 4: Generating SUMMARY.md..."
-
-IGNORE_COUNT=$(grep -cvE '^[[:space:]]*#|^[[:space:]]*$' "$IGNORE_FILE" 2>/dev/null || echo 0)
-
-SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
-{
-  echo "# UI Review Run — ${TIMESTAMP}"
-  echo ""
-  echo "## Screenshots Reviewed"
-  echo ""
-  echo "| Screenshot | Agent A | Agent B | Consensus |"
-  echo "|---|---|---|---|"
-  for name in "${SUMMARY_SECTIONS[@]}"; do
-    # Look up description for the table
-    desc="$name"
-    if [[ -f "$CONTEXT_FILE" ]]; then
-      while IFS= read -r line; do
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        key="${line%%=*}"
-        if [[ "$key" == "$name" ]]; then
-          desc="${line#*=}"
-          break
-        fi
-      done < "$CONTEXT_FILE"
-    fi
-    echo "| \`${name}\` - ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) |"
-  done
-  echo ""
-  echo "## Configuration"
-  echo ""
-  echo "- **Min severity shown:** ${MIN_SEVERITY}"
-  echo "- **Ignored issues:** ${IGNORE_COUNT}"
-  echo ""
-  echo "## Artifacts"
-  echo ""
-  echo "All files saved to: \`${ARTIFACTS_DIR}\`"
-  echo ""
-  echo "---"
-  echo ""
-  echo "## Consensus Results"
-  echo ""
-  for name in "${SUMMARY_SECTIONS[@]}"; do
-    echo "### ${name}"
-    echo ""
-    if [[ -f "$ARTIFACTS_DIR/${name}-consensus.md" ]]; then
-      cat "$ARTIFACTS_DIR/${name}-consensus.md"
-    else
-      echo "_No consensus output generated._"
-    fi
-    echo ""
-    echo "---"
-    echo ""
-  done
-} > "$SUMMARY_FILE"
-
-echo ""
-echo "✅ Review complete. Artifacts saved to: $ARTIFACTS_DIR"
-echo "📄 Summary: $SUMMARY_FILE"
+  IGNORE_BLOCK=$'The following issues have been marked as accepted/wontfix. Do NOT raise or mention these:\n'
