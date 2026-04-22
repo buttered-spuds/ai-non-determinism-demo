@@ -7,13 +7,14 @@
 # Prerequisites:
 #   - copilot CLI installed and authenticated (github.com/github/copilot-cli)
 #   - npx / Node.js available
+#   - jq, curl, base64 (GNU coreutils or macOS equivalents)
 
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Paths
 # ─────────────────────────────────────────────────────────────────────────────
-REPO_ROOT="$(cd ""){dirname "$0"}/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPTS_DIR="$REPO_ROOT/scripts"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -100,10 +101,11 @@ echo "==> Processing: $basename"
   fi
   [[ -z "$description" ]] && description="$basename"
 
-  # Build reviewer prompt (the @ path attaches the image via Copilot CLI)
-  REVIEWER_PROMPT="@${screenshot} This screenshot shows: ${description}\n\n${REVIEWER_TEMPLATE}"
+  # Build reviewer prompt with real newlines (@ prefix attaches the image via Copilot CLI)
+  printf -v REVIEWER_PROMPT '@%s This screenshot shows: %s\n\n%s' \
+    "$screenshot" "$description" "$REVIEWER_TEMPLATE"
   if [[ -n "$IGNORE_BLOCK" ]]; then
-    REVIEWER_PROMPT="${REVIEWER_PROMPT}\n\n${IGNORE_BLOCK}"
+    printf -v REVIEWER_PROMPT '%s\n\n%s' "$REVIEWER_PROMPT" "$IGNORE_BLOCK"
   fi
 
   # ── Agent A: Claude Sonnet 4.6 ──────────────────────────────────────────────
@@ -130,7 +132,8 @@ echo "    -> Calling Agent B (GPT-5.4)..."
 
   # ── Consensus pass ────────────────────────────────────────────────────────────
 echo "    -> Running consensus pass..."
-  CONSENSUS_PROMPT="${CONSENSUS_TEMPLATE}\n\nMIN_SEVERITY: ${MIN_SEVERITY}\n\n--- Agent A Review ---\n${REVIEW_A}\n\n--- Agent B Review ---\n${REVIEW_B}"
+  printf -v CONSENSUS_PROMPT '%s\n\nMIN_SEVERITY: %s\n\n--- Agent A Review ---\n%s\n\n--- Agent B Review ---\n%s' \
+    "$CONSENSUS_TEMPLATE" "$MIN_SEVERITY" "$REVIEW_A" "$REVIEW_B"
 
   CONSENSUS=""
   if CONSENSUS=$(copilot --model claude-sonnet-4.6 -s -p "$CONSENSUS_PROMPT" 2>&1); then
@@ -150,7 +153,7 @@ done
 echo ""
 echo "==> Step 4: Generating SUMMARY.md..."
 
-IGNORE_COUNT=$(grep -cvE '^\\s*#|^\s*$' "$IGNORE_FILE" 2>/dev/null || echo 0)
+IGNORE_COUNT=$(grep -cvE '^[[:space:]]*#|^[[:space:]]*$' "$IGNORE_FILE" 2>/dev/null || echo 0)
 
 SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
 {
@@ -160,7 +163,7 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
   echo ""
   echo "| Screenshot | Agent A | Agent B | Consensus |"
   echo "|---|---|---|---|"
-  for name in ""){SUMMARY_SECTIONS[@]}"; do
+  for name in "${SUMMARY_SECTIONS[@]}"; do
     # Look up description for the table
     desc="$name"
     if [[ -f "$CONTEXT_FILE" ]]; then
@@ -173,7 +176,7 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
         fi
       done < "$CONTEXT_FILE"
     fi
-    echo "| \\`${name}\` — ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) |"
+    echo "| \`${name}\` - ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) |"
   done
   echo ""
   echo "## Configuration"
@@ -183,7 +186,24 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
   echo ""
   echo "## Artifacts"
   echo ""
-  echo "All files saved to: \\`${ARTIFACTS_DIR}\`"
+  echo "All files saved to: \`${ARTIFACTS_DIR}\`"
+  echo ""
+  echo "---"
+  echo ""
+  echo "## Consensus Results"
+  echo ""
+  for name in "${SUMMARY_SECTIONS[@]}"; do
+    echo "### ${name}"
+    echo ""
+    if [[ -f "$ARTIFACTS_DIR/${name}-consensus.md" ]]; then
+      cat "$ARTIFACTS_DIR/${name}-consensus.md"
+    else
+      echo "_No consensus output generated._"
+    fi
+    echo ""
+    echo "---"
+    echo ""
+  done
 } > "$SUMMARY_FILE"
 
 echo ""
