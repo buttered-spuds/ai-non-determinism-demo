@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-# orchestrate.sh -- Multi-agent UI review orchestrator
-# Runs Playwright smoke tests, passes each screenshot to two Copilot CLI agents
-# (Claude Sonnet 4.6 and GPT-5.4) for independent UI reviews, runs a consensus
-# pass, then writes a SUMMARY.md.
+# orchestrate-single-agent.sh -- Single parent-agent UI review orchestrator
+# Replicates orchestrate.sh but collapses the three copilot calls per screenshot
+# (Agent A, Agent B, consensus) into ONE call to a parent agent.
+# The parent agent is prompted to produce two independent reviewer perspectives
+# and a consensus synthesis in a single structured response, which is then split
+# into the same three artifact files as orchestrate.sh.
+#
+# Trade-off vs orchestrate.sh:
+#   + ~66% fewer API calls (1 call per screenshot vs 3)
+#   - Both reviewer perspectives come from the same model in the same context
+#     window, losing the cross-model diversity of Claude vs GPT
 #
 # Prerequisites:
 #   - copilot CLI installed and authenticated (github.com/github/copilot-cli)
@@ -17,9 +24,8 @@ SCRIPT_START=$SECONDS
 STEP_START=$SECONDS
 
 # Call counters
-SUCCESSFUL_A=0;         FAILED_A=0
-SUCCESSFUL_B=0;         FAILED_B=0
-SUCCESSFUL_CONSENSUS=0; FAILED_CONSENSUS=0
+SUCCESSFUL_CALLS=0
+FAILED_CALLS=0
 
 elapsed() {
   local step_secs=$(( SECONDS - STEP_START ))
@@ -36,10 +42,23 @@ prepend_nav() {
   { echo -e "$nav\n\n---\n"; cat "$file"; } > "$tmp" && mv "$tmp" "$file"
 }
 
+# extract_section <start_marker> <end_marker> <file>
+# Prints lines between start_marker and end_marker (exclusive).
+# If end_marker is empty, captures from start_marker to EOF.
+extract_section() {
+  local start="$1"
+  local end="$2"
+  local file="$3"
+  awk -v start="$start" -v end="$end" '
+    index($0, start) > 0              { capture=1; next }
+    end != "" && index($0, end) > 0   { capture=0; next }
+    capture                           { print }
+  ' "$file"
+}
+
 # -----------------------------------------------------------------------------
 # call_copilot -- timeout + exponential-backoff retry wrapper
 # -----------------------------------------------------------------------------
-# Prefer gtimeout (macOS/Homebrew coreutils) then timeout (Linux/GNU).
 if command -v gtimeout &>/dev/null; then
   TIMEOUT_CMD="gtimeout"
 elif command -v timeout &>/dev/null; then
@@ -49,8 +68,9 @@ else
   TIMEOUT_CMD=""
 fi
 
-COPILOT_TIMEOUT=${COPILOT_TIMEOUT:-120}   # seconds per individual copilot call
-COPILOT_RETRIES=${COPILOT_RETRIES:-3}     # total attempts before giving up
+# Longer default than orchestrate.sh -- the parent agent does ~3x the work.
+COPILOT_TIMEOUT=${COPILOT_TIMEOUT:-180}
+COPILOT_RETRIES=${COPILOT_RETRIES:-3}
 
 # call_copilot <model> <prompt>
 # Prints model output to stdout on success; returns 1 after all retries exhausted.
@@ -105,9 +125,8 @@ MIN_SEVERITY=$(grep -E '^MIN_SEVERITY=' "$SCRIPTS_DIR/config/settings.txt" 2>/de
   | cut -d'=' -f2 \
   | tr -d '[:space:]') || true
 
-# Validate against allowed values; warn and default to S3 if invalid
 case "$MIN_SEVERITY" in
-  S1|S2|S3|S4) ;; 
+  S1|S2|S3|S4) ;;
   *)
     echo "WARNING: Invalid MIN_SEVERITY value '${MIN_SEVERITY}'. Defaulting to S3." >&2
     MIN_SEVERITY="S3"
@@ -120,6 +139,7 @@ mkdir -p "$ARTIFACTS_DIR"
 
 echo "==> Artifacts will be written to: $ARTIFACTS_DIR"
 echo "==> MIN_SEVERITY: $MIN_SEVERITY"
+echo "==> Mode: single parent-agent (1 call per screenshot)"
 
 # -----------------------------------------------------------------------------
 # Step 1 -- Run Playwright
@@ -160,6 +180,12 @@ CONTEXT_FILE="$SCRIPTS_DIR/config/context.txt"
 
 SUMMARY_SECTIONS=()
 
+# Section markers -- must match exactly what the parent agent is prompted to output.
+MARKER_A="=== AGENT A REVIEW ==="
+MARKER_B="=== AGENT B REVIEW ==="
+MARKER_C="=== CONSENSUS ==="
+MARKER_END="=== END ==="
+
 SCREENSHOTS=("$REPO_ROOT/tests/screenshots/"*.png)
 if [[ ${#SCREENSHOTS[@]} -eq 0 ]]; then
   echo "ERROR: No screenshots found in $REPO_ROOT/tests/screenshots/." >&2
@@ -169,7 +195,6 @@ fi
 
 for screenshot in "${SCREENSHOTS[@]}"; do
 
-  # Fail fast if the path contains spaces -- the @ token would be truncated
   if [[ "$screenshot" == *" "* ]]; then
     echo "ERROR: Screenshot path contains spaces: $screenshot" >&2
     echo "Move the repository to a space-free path and retry." >&2
@@ -196,85 +221,65 @@ for screenshot in "${SCREENSHOTS[@]}"; do
   fi
   [[ -z "$description" ]] && description="$basename"
 
-  # Build reviewer prompt using printf so variables expand with real newlines.
-  # @<path> at the start attaches the image via the Copilot CLI.
-  printf -v REVIEWER_PROMPT '@%s This screenshot shows: %s\n\n%s' \
-    "$screenshot" "$description" "$REVIEWER_TEMPLATE"
+  # ---------------------------------------------------------------------------
+  # Build the single parent-agent prompt.
+  #
+  # The model is instructed to output content for AGENT A, AGENT B, and
+  # CONSENSUS separated by exact marker lines. The raw output is written to a
+  # temp file so awk can parse it into three separate artifact files.
+  # ---------------------------------------------------------------------------
+  PARENT_PROMPT="@${screenshot} This screenshot shows: ${description}"$'\n\n'
+  PARENT_PROMPT+="You are an AI orchestrating agent. Review this screenshot by producing output in EXACTLY this four-section structure. Each === marker must appear verbatim on its own line with no surrounding text. Begin your response with the first marker."$'\n\n'
+  PARENT_PROMPT+="OUTPUT FORMAT"$'\n'
+  PARENT_PROMPT+="-------------"$'\n'
+  PARENT_PROMPT+="${MARKER_A}"$'\n'
+  PARENT_PROMPT+="(Agent A review here)"$'\n'
+  PARENT_PROMPT+="${MARKER_B}"$'\n'
+  PARENT_PROMPT+="(Agent B review here)"$'\n'
+  PARENT_PROMPT+="${MARKER_C}"$'\n'
+  PARENT_PROMPT+="(Consensus here)"$'\n'
+  PARENT_PROMPT+="${MARKER_END}"$'\n\n'
+  PARENT_PROMPT+="REVIEWER GUIDELINES (apply to both Agent A and Agent B)"$'\n'
+  PARENT_PROMPT+="-------------------------------------------------------"$'\n'
+  PARENT_PROMPT+="${REVIEWER_TEMPLATE}"$'\n\n'
+  PARENT_PROMPT+="Agent A -- focus on TECHNICAL CORRECTNESS and ACCESSIBILITY."$'\n'
+  PARENT_PROMPT+="Agent B -- focus on END-USER EXPERIENCE and USABILITY. Write Agent B as if you have NOT seen Agent A's review."$'\n\n'
+  PARENT_PROMPT+="CONSENSUS GUIDELINES"$'\n'
+  PARENT_PROMPT+="--------------------"$'\n'
+  PARENT_PROMPT+="${CONSENSUS_TEMPLATE}"$'\n'
+  PARENT_PROMPT+="MIN_SEVERITY: ${MIN_SEVERITY}"$'\n'
   if [[ -n "$IGNORE_BLOCK" ]]; then
-    printf -v REVIEWER_PROMPT '%s\n\n%s' "$REVIEWER_PROMPT" "$IGNORE_BLOCK"
+    PARENT_PROMPT+=$'\n'"${IGNORE_BLOCK}"
   fi
 
-  # -- Agent A and B in parallel ------------------------------------------------
-  echo "    -> Calling Agent A (Claude Sonnet 4.6) and Agent B (GPT-5.4) in parallel..."
+  RAW_OUTPUT_FILE="$ARTIFACTS_DIR/${basename}-raw.txt"
 
-    # Agent A background
-  (
-    start=$SECONDS
-    if REVIEW_A=$(call_copilot "claude-sonnet-4.6" "$REVIEWER_PROMPT"); then
-      echo "$REVIEW_A" > "$ARTIFACTS_DIR/${basename}-agent-a.md"
-      echo "    ✓ Agent A done ($(( SECONDS - start ))s)"
-    else
-      echo "FAILED" > "$ARTIFACTS_DIR/${basename}-agent-a.md"
-      echo "    ✗ Agent A FAILED ($(( SECONDS - start ))s)"
-    fi
-  ) &
-  PID_A=$!
-
-  # Agent B background
-  (
-    start=$SECONDS
-    if REVIEW_B=$(call_copilot "gpt-5.4" "$REVIEWER_PROMPT"); then
-      echo "$REVIEW_B" > "$ARTIFACTS_DIR/${basename}-agent-b.md"
-      echo "    ✓ Agent B done ($(( SECONDS - start ))s)"
-    else
-      echo "FAILED" > "$ARTIFACTS_DIR/${basename}-agent-b.md"
-      echo "    ✗ Agent B FAILED ($(( SECONDS - start ))s)"
-    fi
-  ) &
-  PID_B=$!
-
-  echo "    -> Waiting for agents..."
-  wait $PID_A $PID_B
-
-  # Track agent outcomes (check file content before nav is prepended)
-  if [[ "$(cat "$ARTIFACTS_DIR/${basename}-agent-a.md")" == "FAILED" ]]; then
-    (( ++FAILED_A ))
-  else
-    (( ++SUCCESSFUL_A ))
+  echo "    -> Calling parent agent (claude-sonnet-4.6)..."
+  if ! call_copilot "claude-sonnet-4.6" "$PARENT_PROMPT" > "$RAW_OUTPUT_FILE"; then
+    (( ++FAILED_CALLS ))
+    echo "    ✗ Parent agent FAILED for $basename" >&2
+    for suffix in agent-a agent-b consensus; do
+      echo "FAILED" > "$ARTIFACTS_DIR/${basename}-${suffix}.md"
+    done
+    SUMMARY_SECTIONS+=("$basename")
+    elapsed
+    continue
   fi
-  if [[ "$(cat "$ARTIFACTS_DIR/${basename}-agent-b.md")" == "FAILED" ]]; then
-    (( ++FAILED_B ))
-  else
-    (( ++SUCCESSFUL_B ))
-  fi
+  (( ++SUCCESSFUL_CALLS ))
+  echo "    ✓ Parent agent done"
 
-  # Read results from files for consensus
-  REVIEW_A=$(cat "$ARTIFACTS_DIR/${basename}-agent-a.md")
-  REVIEW_B=$(cat "$ARTIFACTS_DIR/${basename}-agent-b.md")
-  
-    # Add navigation to agent files
+  # Parse each section out of the raw output
+  extract_section "$MARKER_A" "$MARKER_B"   "$RAW_OUTPUT_FILE" > "$ARTIFACTS_DIR/${basename}-agent-a.md"
+  extract_section "$MARKER_B" "$MARKER_C"   "$RAW_OUTPUT_FILE" > "$ARTIFACTS_DIR/${basename}-agent-b.md"
+  extract_section "$MARKER_C" "$MARKER_END" "$RAW_OUTPUT_FILE" > "$ARTIFACTS_DIR/${basename}-consensus.md"
+
+  # Add navigation headers (identical format to orchestrate.sh)
   prepend_nav "$ARTIFACTS_DIR/${basename}-agent-a.md" \
     "[← Summary](SUMMARY.md) | **Agent A** | [Agent B](${basename}-agent-b.md) | [Consensus](${basename}-consensus.md)"
   prepend_nav "$ARTIFACTS_DIR/${basename}-agent-b.md" \
     "[← Summary](SUMMARY.md) | [Agent A](${basename}-agent-a.md) | **Agent B** | [Consensus](${basename}-consensus.md)"
-
-  # -- Consensus pass -----------------------------------------------------------
-  echo "    -> Running consensus pass..."
-  printf -v CONSENSUS_PROMPT '%s\n\nMIN_SEVERITY: %s\n\n--- Agent A Review ---\n%s\n\n--- Agent B Review ---\n%s' \
-    "$CONSENSUS_TEMPLATE" "$MIN_SEVERITY" "$REVIEW_A" "$REVIEW_B"
-
-  CONSENSUS=""
-  if CONSENSUS=$(call_copilot "claude-sonnet-4.6" "$CONSENSUS_PROMPT"); then
-    (( ++SUCCESSFUL_CONSENSUS ))
-    echo "$CONSENSUS" > "$ARTIFACTS_DIR/${basename}-consensus.md"
-      prepend_nav "$ARTIFACTS_DIR/${basename}-consensus.md" \
+  prepend_nav "$ARTIFACTS_DIR/${basename}-consensus.md" \
     "[← Summary](SUMMARY.md) | [Agent A](${basename}-agent-a.md) | [Agent B](${basename}-agent-b.md) | **Consensus**"
-  else
-    (( ++FAILED_CONSENSUS ))
-    echo "    WARNING: Consensus pass failed for $basename." >&2
-    echo "FAILED" > "$ARTIFACTS_DIR/${basename}-consensus.md"
-    CONSENSUS="FAILED"
-  fi
 
   SUMMARY_SECTIONS+=("$basename")
   elapsed
@@ -286,12 +291,11 @@ done
 echo ""
 echo "==> Step 4: Generating SUMMARY.md..."
 
-# Count non-comment, non-blank lines in ignore.txt
 IGNORE_COUNT=$(grep -cvE '^[[:space:]]*(#|$)' "$IGNORE_FILE" 2>/dev/null || echo 0)
 
 SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
 {
-  echo "# UI Review Run -- ${TIMESTAMP}"
+  echo "# UI Review Run -- ${TIMESTAMP} (single-agent mode)"
   echo ""
   echo "## Screenshots Reviewed"
   echo ""
@@ -312,14 +316,12 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
     preview=""
     consensus_file="$ARTIFACTS_DIR/${name}-consensus.md"
     if [[ -f "$consensus_file" ]]; then
-      # Avoid pipefail exits when no preview line exists.
       preview=$(awk '
         /^\[←/ { next }
         /^---$/ { next }
         /^[[:space:]]*$/ { next }
         { print; exit }
       ' "$consensus_file")
-      # Escape markdown table delimiters to keep table formatting intact.
       preview="${preview//|/\\|}"
     fi
     echo "| \`${name}\` | ${desc} | [view](${name}-agent-a.md) | [view](${name}-agent-b.md) | [view](${name}-consensus.md) | ${preview} |"
@@ -329,15 +331,16 @@ SUMMARY_FILE="$ARTIFACTS_DIR/SUMMARY.md"
   echo ""
   echo "- **Min severity shown:** ${MIN_SEVERITY}"
   echo "- **Ignored issues:** ${IGNORE_COUNT}"
+  echo "- **Mode:** single parent-agent (1 copilot call per screenshot vs 3 in orchestrate.sh)"
   echo ""
   echo "## Artifacts"
   echo ""
   echo "All files saved to: \`${ARTIFACTS_DIR}\`"
 } > "$SUMMARY_FILE"
 elapsed
- 
-TOTAL_CALLS=$(( SUCCESSFUL_A + FAILED_A + SUCCESSFUL_B + FAILED_B + SUCCESSFUL_CONSENSUS + FAILED_CONSENSUS ))
-TOTAL_FAILED=$(( FAILED_A + FAILED_B + FAILED_CONSENSUS ))
+
+TOTAL_CALLS=$(( SUCCESSFUL_CALLS + FAILED_CALLS ))
+EQUIVALENT_MULTI=$(( ${#SUMMARY_SECTIONS[@]} * 3 ))
 TOTAL_RUNTIME=$(( SECONDS - SCRIPT_START ))
 
 echo ""
@@ -348,12 +351,11 @@ echo " Artifacts     : $ARTIFACTS_DIR"
 echo " Summary       : $SUMMARY_FILE"
 echo ""
 echo " --- API Call Breakdown ---"
-printf " %-22s %d  (%d failed)  model: claude-sonnet-4.6\n" "Agent A calls:" $(( SUCCESSFUL_A + FAILED_A )) "$FAILED_A"
-printf " %-22s %d  (%d failed)  model: gpt-5.4\n"           "Agent B calls:" $(( SUCCESSFUL_B + FAILED_B )) "$FAILED_B"
-printf " %-22s %d  (%d failed)  model: claude-sonnet-4.6\n" "Consensus calls:" $(( SUCCESSFUL_CONSENSUS + FAILED_CONSENSUS )) "$FAILED_CONSENSUS"
+printf " %-22s %d  (%d failed)  model: claude-sonnet-4.6\n" "Parent agent calls:" "$TOTAL_CALLS" "$FAILED_CALLS"
 echo " ------------------------------------------"
-printf " %-22s %d  (%d failed)\n" "Total API calls:" "$TOTAL_CALLS" "$TOTAL_FAILED"
+printf " %-22s %d\n" "Total API calls:" "$TOTAL_CALLS"
 echo " Premium requests used: ~${TOTAL_CALLS}  (1 per copilot CLI call, all 1x models)"
+printf " vs orchestrate.sh:    ~%d calls for %d screenshots\n" "$EQUIVALENT_MULTI" "${#SUMMARY_SECTIONS[@]}"
 echo ""
 echo " Total runtime : ${TOTAL_RUNTIME}s"
 echo "==========================================="
